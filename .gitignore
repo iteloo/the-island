@@ -1,0 +1,11 @@
+# elm-package generated files
+elm-stuff
+
+# Binary output from go build
+server/server
+
+# Compiled output
+*elm.js
+
+# Vim swap files
+*.swp

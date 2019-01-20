@@ -1,31 +1,33 @@
 module Model exposing
     ( AppModel(..)
-    , Auction
-    , AuctionModel
-    , Bid
     , GameModel
+    , JoinGameModel
     , Model
-    , ReadyModel
+    , SiteSelectionModel
+    , SiteVisitModel
     , Stage(..)
-    , TradeModel
-    , WelcomeModel
+    , WaitModel
+    , getStageType
     , initAppModel
-    , initAuctionModel
     , initGameModel
+    , initJoinGameModel
     , initModel
-    , initReadyModel
-    , initTradeModel
-    , initWelcomeModel
+    , initSiteSelectionModel
+    , initSiteVisitModel
+    , initWaitModel
     , timer
     )
 
+import Api
 import BaseType exposing (..)
-import Card exposing (Card)
 import Lens exposing (PureLens)
-import Material exposing (Fruit, Material)
+import Material exposing (Material, Resource)
 import Time exposing (Time)
 import Timer exposing (Timer)
-import ZoomList exposing (ZoomList)
+
+
+siteSelectionDuration =
+    10 * Time.second
 
 
 type alias Model =
@@ -35,11 +37,11 @@ type alias Model =
 
 
 type AppModel
-    = WelcomeScreen WelcomeModel
-    | Game GameModel
+    = JoinGameScreen JoinGameModel
+    | GameScreen GameModel
 
 
-type alias WelcomeModel =
+type alias JoinGameModel =
     { gameNameInput : String
 
     {- [tmp] [hack] right now this is needed
@@ -58,63 +60,51 @@ type alias WelcomeModel =
 
 type alias GameModel =
     { gameName : String
+    , playerName : String
     , stage : Stage
-    , name : String
-    , gold : Int
     , inventory : Material Int
-    , factories : List Factory
-    , effects : List Effect
-    , cards : ZoomList Card
+    , basket : Material Int
     }
 
 
 type Stage
-    = ReadyStage ReadyModel
-    | AuctionStage AuctionModel
-    | TradeStage TradeModel
+    = -- [todo] move into AppModel to avoid storing bogus game info
+      -- currently kept like this to utilise existing code
+      WaitStage WaitModel
+    | SiteSelectionStage SiteSelectionModel
+    | SiteVisitStage SiteVisitModel
+    | GameOverStage
 
 
-type alias ReadyModel =
+type alias WaitModel =
     { ready : Bool
     , playerInfo : List PlayerInfo
     }
 
 
-type alias AuctionModel =
-    { auction : Maybe Auction }
-
-
-type alias Auction =
-    { card : Card
-    , highestBid : Maybe Bid
+type alias SiteSelectionModel =
+    { ready : Bool
+    , siteSelected : Maybe Site
     , timer : Timer
     }
 
 
-type alias Bid =
-    { bidder : String
-    , bid : Int
+type alias SiteVisitModel =
+    { site : Site
+    , event : Maybe Event
     }
 
 
-type alias TradeModel =
-    { basket : Material Int
-    , timer : Timer
-    }
+type alias Event =
+    Extra Api.EventMessage
 
 
-type alias Factory =
-    { name : String
-    , fruit : Fruit
-    , number : Int
-    }
-
-
-type alias Effect =
-    { name : String
-    , author : String
-    , yieldRateModifier : Material Float
-    , roundsLeft : Int
+{-| [hack] is there a cleaner way to extend records?
+-}
+type alias Extra a =
+    { a
+        | timer : Timer
+        , resourceAmount : Int
     }
 
 
@@ -127,11 +117,11 @@ initModel hostname =
 
 initAppModel : AppModel
 initAppModel =
-    WelcomeScreen initWelcomeModel
+    JoinGameScreen initJoinGameModel
 
 
-initWelcomeModel : WelcomeModel
-initWelcomeModel =
+initJoinGameModel : JoinGameModel
+initJoinGameModel =
     { gameNameInput = ""
     , submittedName = Nothing
     }
@@ -140,36 +130,47 @@ initWelcomeModel =
 initGameModel : String -> GameModel
 initGameModel name =
     { gameName = name
-    , stage = ReadyStage initReadyModel
-    , name = "Anonymous"
-    , gold = 25
+    , playerName = "Anonymous"
+    , stage = WaitStage initWaitModel
     , inventory = Material.empty
-    , factories = []
-
-    -- [note] should perhaps use Maybe since
-    -- we are using this to represent server pushed vallue
-    , effects = []
-    , cards = ZoomList.empty
+    , basket = Material.empty
     }
 
 
-initReadyModel : ReadyModel
-initReadyModel =
+initWaitModel : WaitModel
+initWaitModel =
     { ready = False
     , playerInfo = []
     }
 
 
-initTradeModel : TradeModel
-initTradeModel =
-    { basket = Material.empty
-    , timer = Timer.init (10 * Time.second)
+initSiteSelectionModel =
+    { ready = False
+    , siteSelected = Nothing
+    , timer = Timer.init siteSelectionDuration
     }
 
 
-initAuctionModel : AuctionModel
-initAuctionModel =
-    { auction = Nothing }
+initSiteVisitModel site =
+    { site = site
+    , event = Nothing
+    }
+
+
+getStageType : Stage -> StageType
+getStageType stage =
+    case stage of
+        WaitStage _ ->
+            WaitStageType
+
+        SiteSelectionStage _ ->
+            SiteVisitStageType
+
+        SiteVisitStage _ ->
+            SiteVisitStageType
+
+        GameOverStage ->
+            GameOverStageType
 
 
 
@@ -181,31 +182,37 @@ timer =
     let
         get stage =
             case stage of
-                ReadyStage _ ->
+                WaitStage _ ->
                     Nothing
 
-                AuctionStage m ->
-                    m.auction |> Maybe.map .timer
-
-                TradeStage m ->
+                SiteSelectionStage m ->
                     Just m.timer
+
+                SiteVisitStage m ->
+                    m.event |> Maybe.map .timer
+
+                GameOverStage ->
+                    Nothing
 
         set timer stage =
             case stage of
-                ReadyStage _ ->
+                WaitStage _ ->
                     Nothing
 
-                TradeStage m ->
-                    Just <| TradeStage { m | timer = timer }
+                SiteSelectionStage m ->
+                    Just <| SiteSelectionStage { m | timer = timer }
 
-                AuctionStage m ->
+                SiteVisitStage m ->
                     Just <|
-                        AuctionStage
+                        SiteVisitStage
                             { m
-                                | auction =
+                                | event =
                                     Maybe.map
-                                        (\a -> { a | timer = timer })
-                                        m.auction
+                                        (\e -> { e | timer = timer })
+                                        m.event
                             }
+
+                GameOverStage ->
+                    Nothing
     in
     { get = get, set = set }

@@ -1,6 +1,7 @@
 module BaseType exposing
-    ( CardSeed
+    ( ActionButtonInfo
     , PlayerInfo
+    , Site(..)
     , StageType(..)
     , Uber(..)
     , add
@@ -9,19 +10,30 @@ module BaseType exposing
 import Material exposing (Material)
 
 
-type StageType
-    = ReadyStageType
-    | AuctionStageType
-    | TradeStageType
-
-
-type alias CardSeed =
-    Int
-
-
 type alias PlayerInfo =
     { name : String
     , ready : Bool
+    }
+
+
+type Site
+    = Forest
+    | Farm
+    | Hospital
+    | Watchtower
+    | Beach
+
+
+type StageType
+    = WaitStageType
+    | SiteSelectionStageType
+    | SiteVisitStageType
+    | GameOverStageType
+
+
+type alias ActionButtonInfo =
+    { actionButtonName : String
+    , actionButtonResourceAllocation : String
     }
 
 

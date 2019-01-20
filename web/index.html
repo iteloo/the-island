@@ -1,0 +1,39 @@
+<html>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet">
+
+<body>
+    <div id="main"></div>
+    <script src="elm.js"></script>
+    <script src="shake.js"></script>
+    <script>
+        var node = document.getElementById('main');
+        window.app = Elm.Main.embed(node, {
+            hostname: window.location.host
+        });
+
+        var shake = new Shake({
+            threshold: 15,
+            timeout: 1000
+        }).start();
+
+        function trySubscribeShake() {
+            setTimeout(() => {
+                if (window.app.hasOwnProperty("ports")) {
+                    window.addEventListener('shake', () => window.app.ports.shake.send(null));
+                } else {
+                    trySubscribeShake();
+                }
+            }, 100);
+        }
+
+        trySubscribeShake();
+
+        function preventDefault(e){
+            e.preventDefault();
+        }
+        document.body.addEventListener('touchmove', preventDefault, { passive: false });
+    </script>
+</body>

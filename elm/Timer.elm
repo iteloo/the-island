@@ -1,15 +1,14 @@
-module Timer
-    exposing
-        ( Timer
-        , State(..)
-        , init
-        , state
-        , timeLeft
-        , setTimeLeft
-        , update
-        , pause
-        , resume
-        )
+module Timer exposing
+    ( State(..)
+    , Timer
+    , init
+    , pause
+    , resume
+    , setTimeLeft
+    , state
+    , timeLeft
+    , update
+    )
 
 import Time exposing (Time)
 
@@ -88,6 +87,7 @@ update tick timer =
         Running_ rec ->
             if rec.timeLeft < 0 then
                 Done_
+
             else
                 Running_
                     { rec
@@ -97,7 +97,7 @@ update tick timer =
                                 lastTick =
                                     Maybe.withDefault tick rec.lastTick
                             in
-                                rec.timeLeft - (tick - lastTick)
+                            rec.timeLeft - (tick - lastTick)
                     }
 
         Done_ ->

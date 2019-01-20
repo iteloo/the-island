@@ -1,5 +1,7 @@
 module Api exposing
     ( Action(..)
+    , EventMessage
+    , EventResponseMessage
     , ServerAction(..)
     , decodeMessage
     , encodeToMessage
@@ -7,21 +9,29 @@ module Api exposing
 
 import BaseType exposing (..)
 import Json.Decode as D
+import Json.Decode.Pipeline as D
 import Json.Encode as E
-import Material exposing (Fruit, Material)
+import Material exposing (Material, Resource)
 
 
 type Action
     = Welcome String
     | GameStateChanged StageType
     | SetClock Int
-    | Auction CardSeed
-    | BidUpdated Int String
-    | AuctionWon
-    | EffectActivated CardSeed String
-    | TradeCompleted (Material Int)
-    | GameOver String
     | PlayerInfoUpdated (List PlayerInfo)
+    | TradeCompleted (Material Int)
+    | Event EventMessage
+    | GameOver String
+
+
+type alias EventMessage =
+    { messageId : Int
+    , title : String
+    , description : String
+    , okButtonText : Maybe String
+    , usedResourceName : Maybe String
+    , actionButton : Maybe ActionButtonInfo
+    }
 
 
 decodeMessage : String -> Result String Action
@@ -43,14 +53,15 @@ actionHelp a =
                     |> D.andThen
                         (\s ->
                             case s of
+                                -- [todo] change to "waiting"?
                                 "ready" ->
-                                    D.succeed ReadyStageType
+                                    D.succeed WaitStageType
 
-                                "auction" ->
-                                    D.succeed AuctionStageType
+                                "site_selection" ->
+                                    D.succeed SiteSelectionStageType
 
-                                "trade" ->
-                                    D.succeed TradeStageType
+                                "site_visit" ->
+                                    D.succeed SiteVisitStageType
 
                                 _ ->
                                     D.fail "Unrecognized stage name"
@@ -76,24 +87,6 @@ actionHelp a =
                     )
                 )
 
-        "auction_seed" ->
-            D.map Auction <|
-                D.field "seed" D.int
-
-        "bid_updated" ->
-            D.map2 BidUpdated
-                (D.field "bid" D.int)
-                (D.field "winner" D.string)
-
-        "auction_won" ->
-            D.succeed AuctionWon
-
-        "effect_activated" ->
-            D.map2 EffectActivated
-                (D.field "card_id" D.int)
-                --[note] doesn't sync up with name change
-                (D.field "author" D.string)
-
         "trade_completed" ->
             D.map TradeCompleted <|
                 D.field "materials"
@@ -111,6 +104,17 @@ actionHelp a =
                             )
                     )
 
+        "event" ->
+            -- [todo] add better logic
+            D.succeed EventMessage
+                |> D.required "message_id" D.int
+                |> D.required "title" D.string
+                |> D.required "description" D.string
+                |> D.custom okButton
+                |> D.custom usedResource
+                |> D.custom actionButton
+                |> D.map Event
+
         "game_over" ->
             D.map GameOver <|
                 D.field "winner" D.string
@@ -119,38 +123,88 @@ actionHelp a =
             D.fail ("Received unrecognized action from server: " ++ a)
 
 
-fruit : D.Decoder Fruit
-fruit =
+okButton : D.Decoder (Maybe String)
+okButton =
+    D.field "has_ok" D.bool
+        |> D.andThen
+            (\hasOk ->
+                if hasOk then
+                    D.succeed Just
+                        |> D.required "ok_button_text" D.string
+
+                else
+                    D.succeed Nothing
+            )
+
+
+usedResource : D.Decoder (Maybe String)
+usedResource =
+    D.field "uses_resource" D.bool
+        |> D.andThen
+            (\usesResource ->
+                if usesResource then
+                    D.succeed Just
+                        |> D.required "used_resource_name" D.string
+
+                else
+                    D.succeed Nothing
+            )
+
+
+actionButton : D.Decoder (Maybe ActionButtonInfo)
+actionButton =
+    D.field "has_action_button" D.bool
+        |> D.andThen
+            (\hasActionButton ->
+                if hasActionButton then
+                    D.succeed ActionButtonInfo
+                        |> D.required "action_button_name" D.string
+                        |> D.required "action_button_resource_allocation"
+                            D.string
+                        |> D.map Just
+
+                else
+                    D.succeed Nothing
+            )
+
+
+resource : D.Decoder Resource
+resource =
     D.string
         |> D.andThen
             (\s ->
-                case Material.fruitFromString s of
-                    Just fruit ->
-                        D.succeed fruit
+                case Material.resourceFromString s of
+                    Just resource ->
+                        D.succeed resource
 
                     Nothing ->
-                        D.fail "Unrecognized fruit name"
+                        D.fail "Unrecognized resource name"
             )
 
 
 material : D.Decoder a -> D.Decoder (Material a)
 material a =
     D.map4 Material
-        (D.field "blueberry" a)
-        (D.field "tomato" a)
-        (D.field "corn" a)
-        (D.field "purple" a)
+        (D.field "log" a)
+        (D.field "food" a)
+        (D.field "bandage" a)
+        (D.field "bullet" a)
 
 
 type ServerAction
     = JoinGame String
     | Ready Bool
-    | Bid Int
     | SetName String
-    | Sell Fruit Int
     | Trade (Material Int)
-    | ActivateCard CardSeed
-    | ActivateEffect CardSeed
+    | EventResponse EventResponseMessage
+
+
+type alias EventResponseMessage =
+    { messageId : Int
+    , clickedOk : Bool
+    , clickedAction : Bool
+    , resourceAmount : Int
+    }
 
 
 encodeToMessage : ServerAction -> String
@@ -175,21 +229,8 @@ encodeServerAction a =
                       ]
                     )
 
-                Bid x ->
-                    ( "bid"
-                    , [ ( "amount", E.int x )
-                      ]
-                    )
-
                 SetName name ->
                     ( "set_name", [ ( "name", E.string name ) ] )
-
-                Sell type_ quantity ->
-                    ( "sell"
-                    , [ ( "type", encodeFruit type_ )
-                      , ( "quantity", E.int quantity )
-                      ]
-                    )
 
                 Trade mat ->
                     ( "trade"
@@ -200,13 +241,12 @@ encodeServerAction a =
                       ]
                     )
 
-                {- [todo] Finish implementing -}
-                ActivateCard seed ->
-                    ( "activate_card", [] )
-
-                ActivateEffect id_ ->
-                    ( "activate_effect"
-                    , [ ( "card_id", E.int id_ )
+                EventResponse response ->
+                    ( "event_response"
+                    , [ ( "message_id", E.int response.messageId )
+                      , ( "clicked_ok", E.bool response.clickedOk )
+                      , ( "clicked_action", E.bool response.clickedAction )
+                      , ( "resource_amount", E.int response.resourceAmount )
                       ]
                     )
     in
@@ -216,8 +256,8 @@ encodeServerAction a =
             ++ values
 
 
-encodeFruit : Fruit -> E.Value
-encodeFruit =
+encodeResource : Resource -> E.Value
+encodeResource =
     toString >> String.toLower >> E.string
 
 
@@ -225,5 +265,5 @@ encodeMaterial : (a -> E.Value) -> Material a -> E.Value
 encodeMaterial a =
     E.object
         << Material.fold
-            (\fr v -> (::) ( String.toLower (toString fr), a v ))
+            (\rsr v -> (::) ( String.toLower (toString rsr), a v ))
             []

@@ -1,10 +1,17 @@
-module Msg exposing (AppMsg(..), AuctionMsg(..), GameMsg(..), Msg(..), ProductionMsg(..), ReadyMsg(..), TradeMsg(..), WelcomeMsg(..))
+module Msg exposing
+    ( AppMsg(..)
+    , GameMsg(..)
+    , JoinGameMsg(..)
+    , Msg(..)
+    , SiteSelectionMsg(..)
+    , SiteVisitMsg(..)
+    , WaitMsg(..)
+    )
 
 import Api
-import Card exposing (Card)
-import Material exposing (Fruit, Material)
+import BaseType exposing (..)
+import Material exposing (Material, Resource)
 import Time exposing (Time)
-import ZoomList exposing (ZoomList)
 
 
 type Msg
@@ -12,44 +19,38 @@ type Msg
 
 
 type AppMsg
-    = WelcomeMsg WelcomeMsg
+    = JoinGameMsg JoinGameMsg
     | GameMsg GameMsg
     | ServerMsgReceived (Result String Api.Action)
 
 
-type WelcomeMsg
+type JoinGameMsg
     = JoinGameButton
     | GameNameInputChange String
 
 
-type GameMsg
-    = ReadyMsg ReadyMsg
-    | AuctionMsg AuctionMsg
-    | TradeMsg TradeMsg
-    | ActivateButton
-    | UpdateTimer Time
-    | UpdateCards (ZoomList Card)
-    | DismissCardDetailView
-
-
-type ReadyMsg
+type WaitMsg
     = -- [tmp] unused right now
       Ready Bool
     | NameInputChange String
 
 
-type TradeMsg
-    = Yield
-    | MoveToBasket Fruit Int
+type GameMsg
+    = WaitMsg WaitMsg
+    | SiteSelectionMsg SiteSelectionMsg
+    | SiteVisitMsg SiteVisitMsg
+    | UpdateTimer Time
+    | MoveToBasket Resource Int
     | EmptyBasket
     | Shake
-    | YieldRoll (Material Int)
 
 
-type ProductionMsg
-    = FactorySelected Fruit
+type SiteSelectionMsg
+    = SiteSelected Site
+    | ReadyButton
 
 
-type AuctionMsg
-    = BidButton
-    | ClockUpdated Int
+type SiteVisitMsg
+    = OkButton
+    | UseResourceButton
+    | ActionButton

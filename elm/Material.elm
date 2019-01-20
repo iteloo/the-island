@@ -1,15 +1,15 @@
 module Material exposing
-    ( Fruit(..)
-    , Material
-    , allFruits
+    ( Material
+    , Resource(..)
+    , allResources
     , create
     , empty
     , fold
-    , fruitFromString
     , lookup
     , map
     , map2
     , map3
+    , resourceFromString
     , set
     , shorthand
     , toList
@@ -21,72 +21,72 @@ module Material exposing
     )
 
 
-type Fruit
-    = Blueberry
-    | Tomato
-    | Corn
-    | Purple
+type Resource
+    = Log
+    | Food
+    | Bandage
+    | Bullet
 
 
-allFruits : List Fruit
-allFruits =
-    [ Blueberry, Tomato, Corn, Purple ]
+allResources : List Resource
+allResources =
+    [ Log, Food, Bandage, Bullet ]
 
 
-fruitFromString : String -> Maybe Fruit
-fruitFromString str =
+resourceFromString : String -> Maybe Resource
+resourceFromString str =
     case str of
-        "blueberry" ->
-            Just Blueberry
+        "log" ->
+            Just Log
 
-        "tomato" ->
-            Just Tomato
+        "food" ->
+            Just Food
 
-        "corn" ->
-            Just Corn
+        "bandage" ->
+            Just Bandage
 
-        "purple" ->
-            Just Purple
+        "bullet" ->
+            Just Bullet
 
         _ ->
             Nothing
 
 
-shorthand : Fruit -> String
+shorthand : Resource -> String
 shorthand =
     String.toLower << String.left 1 << toString
 
 
 type alias Material a =
-    { blueberry : a
-    , tomato : a
-    , corn : a
-    , purple : a
+    { log : a
+    , food : a
+    , bandage : a
+    , bullet : a
     }
 
 
-lookup : Fruit -> Material a -> a
-lookup fr =
-    case fr of
-        Blueberry ->
-            .blueberry
+lookup : Resource -> Material a -> a
+lookup rsr =
+    case rsr of
+        Log ->
+            .log
 
-        Tomato ->
-            .tomato
+        Food ->
+            .food
 
-        Corn ->
-            .corn
+        Bandage ->
+            .bandage
 
-        Purple ->
-            .purple
+        Bullet ->
+            .bullet
 
 
-create : (Fruit -> a) -> Material a
+create : (Resource -> a) -> Material a
 create f =
-    { blueberry = f Blueberry
-    , tomato = f Tomato
-    , corn = f Corn
-    , purple = f Purple
+    { log = f Log
+    , food = f Food
+    , bandage = f Bandage
+    , bullet = f Bullet
     }
 
 
@@ -95,9 +95,9 @@ empty =
     create (always 0)
 
 
-toList : Material a -> List ( Fruit, a )
+toList : Material a -> List ( Resource, a )
 toList mat =
-    List.map (\fr -> ( fr, lookup fr mat )) allFruits
+    List.map (\rsr -> ( rsr, lookup rsr mat )) allResources
 
 
 values : Material a -> List a
@@ -105,59 +105,59 @@ values =
     toList >> List.map Tuple.second
 
 
-map : (Fruit -> a -> b) -> Material a -> Material b
+map : (Resource -> a -> b) -> Material a -> Material b
 map f mat =
-    create (\fr -> f fr (lookup fr mat))
+    create (\rsr -> f rsr (lookup rsr mat))
 
 
 map2 :
-    (Fruit -> a -> b -> c)
+    (Resource -> a -> b -> c)
     -> Material a
     -> Material b
     -> Material c
 map2 f mat =
-    map (\fr -> f fr (lookup fr mat))
+    map (\rsr -> f rsr (lookup rsr mat))
 
 
 map3 :
-    (Fruit -> a -> b -> c -> d)
+    (Resource -> a -> b -> c -> d)
     -> Material a
     -> Material b
     -> Material c
     -> Material d
 map3 f mat =
-    map2 (\fr -> f fr (lookup fr mat))
+    map2 (\rsr -> f rsr (lookup rsr mat))
 
 
 traverseMaybe : Material (Maybe a) -> Maybe (Material a)
 traverseMaybe mat =
     List.foldr
-        (\fr ->
+        (\rsr ->
             Maybe.andThen
                 (\m ->
                     Maybe.map
-                        (\a -> update fr (always a) m)
-                        (lookup fr mat)
+                        (\a -> update rsr (always a) m)
+                        (lookup rsr mat)
                 )
         )
-        -- [hack] grab from Blueberry
+        -- [hack] grab from Log
         (Maybe.map
             (\a -> create (always a))
-            (lookup Blueberry mat)
+            (lookup Log mat)
         )
-        allFruits
+        allResources
 
 
-set : Fruit -> a -> Material a -> Material a
-set fruit =
-    update fruit << always
+set : Resource -> a -> Material a -> Material a
+set resource =
+    update resource << always
 
 
-update : Fruit -> (a -> a) -> Material a -> Material a
-update fruit upd =
+update : Resource -> (a -> a) -> Material a -> Material a
+update resource upd =
     map
-        (\fr ->
-            if fr == fruit then
+        (\rsr ->
+            if rsr == resource then
                 upd
 
             else
@@ -166,15 +166,15 @@ update fruit upd =
 
 
 tryUpdate :
-    Fruit
+    Resource
     -> (a -> Maybe a)
     -> Material a
     -> Maybe (Material a)
-tryUpdate fruit f =
+tryUpdate resource f =
     traverseMaybe
         << map
-            (\fr ->
-                if fr == fruit then
+            (\rsr ->
+                if rsr == resource then
                     f
 
                 else
@@ -182,7 +182,7 @@ tryUpdate fruit f =
             )
 
 
-fold : (Fruit -> a -> b -> b) -> b -> Material a -> b
+fold : (Resource -> a -> b -> b) -> b -> Material a -> b
 fold acc b =
     List.foldr (uncurry acc) b << toList
 
