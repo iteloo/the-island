@@ -1,5 +1,6 @@
 module View exposing (view)
 
+import BaseType exposing (..)
 import Helper
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -251,12 +252,64 @@ readyOrWaitingIcon state =
 
 siteSelectionView : SiteSelectionModel -> Html SiteSelectionMsg
 siteSelectionView m =
-    div [] [ text <| toString m ]
+    let
+        siteButton site =
+            button [ onClick (SiteSelected site) ]
+                [ text <| siteToString site ]
+    in
+    div [] <|
+        List.concat
+            [ List.map siteButton allSites
+            ]
 
 
 siteVisitView : SiteVisitModel -> Html SiteVisitMsg
 siteVisitView m =
-    div [] [ text <| toString m ]
+    div [] <|
+        case m.event of
+            Just e ->
+                List.concat <|
+                    [ [ h1 [] [ text e.title ]
+                      , text e.description
+                      , div [] <|
+                            List.concat
+                                [ case e.okButton of
+                                    Just txt ->
+                                        [ button [ onClick OkButton ]
+                                            [ text txt ]
+                                        ]
+
+                                    Nothing ->
+                                        []
+                                , case e.spendButton of
+                                    Just rsr ->
+                                        [ button [ onClick UseResourceButton ]
+                                            -- [todo] let users choose amount
+                                            [ text <| "Use a " ++ toString rsr ]
+                                        ]
+
+                                    Nothing ->
+                                        []
+                                , case e.actionButton of
+                                    Just ab ->
+                                        [ button [ onClick ActionButton ]
+                                            [ text <|
+                                                ab.actionButtonText
+                                                    ++ " (Uses "
+                                                    ++ toString ab.actionButtonResourceAmount
+                                                    ++ toString ab.actionButtonResource
+                                                    ++ ")"
+                                            ]
+                                        ]
+
+                                    Nothing ->
+                                        []
+                                ]
+                      ]
+                    ]
+
+            Nothing ->
+                [ text "Nothing seems to be happening..." ]
 
 
 gameOverView : Html GameMsg

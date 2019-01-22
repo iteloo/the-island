@@ -104,7 +104,6 @@ type alias Event =
 type alias Extra a =
     { a
         | timer : Timer
-        , resourceAmount : Int
     }
 
 

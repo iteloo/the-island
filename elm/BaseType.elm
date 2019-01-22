@@ -5,10 +5,11 @@ module BaseType exposing
     , StageType(..)
     , Uber(..)
     , add
+    , allSites
     , siteToString
     )
 
-import Material exposing (Material)
+import Material exposing (Material, Resource)
 
 
 type alias PlayerInfo =
@@ -25,6 +26,10 @@ type Site
     | Beach
 
 
+allSites =
+    [ Forest, Farm, Hospital, Watchtower, Beach ]
+
+
 siteToString : Site -> String
 siteToString =
     toString
@@ -38,8 +43,9 @@ type StageType
 
 
 type alias ActionButtonInfo =
-    { actionButtonName : String
-    , actionButtonResourceAllocation : String
+    { actionButtonText : String
+    , actionButtonResource : Resource
+    , actionButtonResourceAmount : Int
     }
 
 

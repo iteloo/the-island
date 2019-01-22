@@ -28,8 +28,8 @@ type alias EventMessage =
     { messageId : Int
     , title : String
     , description : String
-    , okButtonText : Maybe String
-    , usedResourceName : Maybe String
+    , okButton : Maybe String
+    , spendButton : Maybe Resource
     , actionButton : Maybe ActionButtonInfo
     }
 
@@ -111,7 +111,7 @@ actionHelp a =
                 |> D.required "title" D.string
                 |> D.required "description" D.string
                 |> D.custom okButton
-                |> D.custom usedResource
+                |> D.custom spendButton
                 |> D.custom actionButton
                 |> D.map Event
 
@@ -137,14 +137,14 @@ okButton =
             )
 
 
-usedResource : D.Decoder (Maybe String)
-usedResource =
-    D.field "uses_resource" D.bool
+spendButton : D.Decoder (Maybe Resource)
+spendButton =
+    D.field "has_spend_button" D.bool
         |> D.andThen
-            (\usesResource ->
-                if usesResource then
+            (\hasSpendButton ->
+                if hasSpendButton then
                     D.succeed Just
-                        |> D.required "used_resource_name" D.string
+                        |> D.required "spend_button_resource" resource
 
                 else
                     D.succeed Nothing
@@ -158,9 +158,9 @@ actionButton =
             (\hasActionButton ->
                 if hasActionButton then
                     D.succeed ActionButtonInfo
-                        |> D.required "action_button_name" D.string
-                        |> D.required "action_button_resource_allocation"
-                            D.string
+                        |> D.required "action_button_text" D.string
+                        |> D.required "action_button_resource" resource
+                        |> D.required "action_button_resource_amount" D.int
                         |> D.map Just
 
                 else

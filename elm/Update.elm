@@ -240,7 +240,13 @@ updateSiteVisit { toGameServer } msg model =
                                     { messageId = e.messageId
                                     , clickedOk = True
                                     , clickedAction = False
-                                    , resourceAmount = e.resourceAmount
+                                    , resourceAmount =
+                                        case e.actionButton of
+                                            Nothing ->
+                                                0
+
+                                            Just ab ->
+                                                ab.actionButtonResourceAmount
                                     }
                                 )
                           ]
@@ -260,7 +266,13 @@ updateSiteVisit { toGameServer } msg model =
                                     { messageId = e.messageId
                                     , clickedOk = False
                                     , clickedAction = True
-                                    , resourceAmount = e.resourceAmount
+                                    , resourceAmount =
+                                        case e.actionButton of
+                                            Nothing ->
+                                                0
+
+                                            Just ab ->
+                                                ab.actionButtonResourceAmount
                                     }
                                 )
                           ]
