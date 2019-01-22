@@ -314,8 +314,25 @@ handleAction action model =
                 model
 
         Api.Event e ->
-            -- [todo] impl
-            model ! []
+            tryUpdate (game |> goIn siteVisit)
+                (\m ->
+                    { m
+                        | event =
+                            Just
+                                { messageId = e.messageId
+                                , title = e.title
+                                , description = e.description
+                                , okButton = e.okButton
+                                , spendButton = e.spendButton
+                                , actionButton = e.actionButton
+
+                                -- [hack] bogus
+                                , timer = Timer.init (100 * Time.second)
+                                }
+                    }
+                        ! []
+                )
+                model
 
         Api.GameOver winner ->
             model ! []
