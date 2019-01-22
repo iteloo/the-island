@@ -209,7 +209,8 @@ updateSiteSelection :
 updateSiteSelection { toGameServer } msg model =
     case msg of
         SiteSelected site ->
-            { model | siteSelected = Just site } ! []
+            { model | siteSelected = Just site }
+                ! [ toGameServer <| Api.SiteSelected site ]
 
         ReadyButton ->
             { model | ready = not model.ready } ! []

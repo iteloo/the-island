@@ -196,6 +196,7 @@ type ServerAction
     | Ready Bool
     | SetName String
     | Trade (Material Int)
+    | SiteSelected Site
     | EventResponse EventResponseMessage
 
 
@@ -237,6 +238,14 @@ encodeServerAction a =
                     , [ ( "materials"
                         , E.string
                             (E.encode 0 (encodeMaterial E.int mat))
+                        )
+                      ]
+                    )
+
+                SiteSelected site ->
+                    ( "site_selected"
+                    , [ ( "site"
+                        , E.string (siteToString site)
                         )
                       ]
                     )
