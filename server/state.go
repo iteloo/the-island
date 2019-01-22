@@ -163,6 +163,10 @@ func (s *SiteVisitController) Name() GameState { return s.name }
 func (s *SiteVisitController) Begin() {
 	s.game.connection.Broadcast(NewSetClockMessage(SiteVisitDuration))
 	s.game.SetTimeout(SiteVisitDuration)
+
+	s.game.connection.Broadcast(
+		NewEventMessage("it works!", "I'm going to sleep"),
+	)
 }
 
 // End is called when the state is no longer active.
