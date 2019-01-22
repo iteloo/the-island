@@ -5,6 +5,7 @@ module BaseType exposing
     , StageType(..)
     , Uber(..)
     , add
+    , siteToString
     )
 
 import Material exposing (Material)
@@ -22,6 +23,11 @@ type Site
     | Hospital
     | Watchtower
     | Beach
+
+
+siteToString : Site -> String
+siteToString =
+    toString
 
 
 type StageType
