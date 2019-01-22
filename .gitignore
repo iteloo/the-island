@@ -2,7 +2,7 @@
 elm-stuff
 
 # Binary output from go build
-server/server
+bin
 
 # Compiled output
 *elm.js
