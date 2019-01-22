@@ -18,6 +18,11 @@ const (
 	// MinPlayers sets the minimum number of players required before the game
 	// will proceed past the Waiting stage.
 	MinPlayers int = 1
+
+	// Amount of time to wait while site is selected.
+	SiteSelectionDuration time.Duration = 5 * time.Second
+	// Amount of time to spend at the site when visiting.
+	SiteVisitDuration time.Duration = 10 * time.Second
 )
 
 type StateController interface {
@@ -115,24 +120,61 @@ func NewSiteSelectionController(game *Game) *SiteSelectionController {
 func (s *SiteSelectionController) Name() GameState { return s.name }
 
 // Begin is called when the state becomes active.
-func (s *SiteSelectionController) Begin() {}
+func (s *SiteSelectionController) Begin() {
+	s.game.connection.Broadcast(NewSetClockMessage(SiteSelectionDuration))
+	s.game.SetTimeout(SiteSelectionDuration)
+}
 
 // End is called when the state is no longer active.
 func (s *SiteSelectionController) End() {}
 
 // Timer is called when a timeout occurs.
-func (s *SiteSelectionController) Timer(tick time.Duration) {}
+func (s *SiteSelectionController) Timer(tick time.Duration) {
+	s.game.ChangeState(SiteVisitState)
+}
 
 // RecieveMessage is called when a user sends a message to the server.
 func (s *SiteSelectionController) RecieveMessage(u User, m Message) {
 	switch msg := m.(type) {
 	case SiteSelectionMessage:
-		// TODO: save this somehow
+		// TODO: save this selection, somehow
 		fmt.Println("message: %d", msg)
 	default:
 		return
 	}
 }
+
+type SiteVisitController struct {
+	game *Game
+	name GameState
+}
+
+func NewSiteVisitController(game *Game) *SiteVisitController {
+	return &SiteVisitController{
+		game: game,
+		name: WaitingState,
+	}
+}
+
+// Name returns the name of the current state.
+func (s *SiteVisitController) Name() GameState { return s.name }
+
+// Begin is called when the state becomes active.
+func (s *SiteVisitController) Begin() {
+	s.game.connection.Broadcast(NewSetClockMessage(SiteVisitDuration))
+	s.game.SetTimeout(SiteVisitDuration)
+}
+
+// End is called when the state is no longer active.
+func (s *SiteVisitController) End() {}
+
+// Timer is called when a timeout occurs.
+func (s *SiteVisitController) Timer(tick time.Duration) {
+	s.game.ChangeState(SiteSelectionState)
+}
+
+// RecieveMessage is called when a user sends a message to the server.
+func (s *SiteVisitController) RecieveMessage(u User, m Message) {}
 
 // NewStateController creates a state controller based on the requested state.
 func NewStateController(game *Game, state GameState) StateController {
@@ -141,6 +183,8 @@ func NewStateController(game *Game, state GameState) StateController {
 		return NewWaitingController(game)
 	case SiteSelectionState:
 		return NewSiteSelectionController(game)
+	case SiteVisitState:
+		return NewSiteVisitController(game)
 	default:
 		panic("Unknown state!")
 	}
