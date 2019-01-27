@@ -110,6 +110,11 @@ type SiteSelectionController struct {
 }
 
 func NewSiteSelectionController(game *Game) *SiteSelectionController {
+	// Reset all selected sites.
+	for u, _ := range game.UserSites {
+		game.UserSites[u] = NoSiteSelected
+	}
+
 	return &SiteSelectionController{
 		game: game,
 		name: WaitingState,
@@ -120,27 +125,34 @@ func NewSiteSelectionController(game *Game) *SiteSelectionController {
 func (s *SiteSelectionController) Name() GameState { return s.name }
 
 // Begin is called when the state becomes active.
-func (s *SiteSelectionController) Begin() {
-	s.game.connection.Broadcast(NewSetClockMessage(SiteSelectionDuration))
-	s.game.SetTimeout(SiteSelectionDuration)
-}
+func (s *SiteSelectionController) Begin() {}
 
 // End is called when the state is no longer active.
 func (s *SiteSelectionController) End() {}
 
 // Timer is called when a timeout occurs.
-func (s *SiteSelectionController) Timer(tick time.Duration) {
-	s.game.ChangeState(SiteVisitState)
-}
+func (s *SiteSelectionController) Timer(tick time.Duration) {}
 
 // RecieveMessage is called when a user sends a message to the server.
 func (s *SiteSelectionController) RecieveMessage(u User, m Message) {
 	switch msg := m.(type) {
 	case SiteSelectionMessage:
-		// TODO: save this selection, somehow
-		fmt.Println("message: %d", msg)
+		s.game.UserSites[u] = msg.SiteSelected
 	default:
 		return
+	}
+
+	// Since a site was selected, check if everyone picked a site. If so, we can proceed.
+	ready := true
+	for u, s := range s.game.UserSites {
+		if s == NoSiteSelected {
+			ready = false
+		}
+		fmt.Printf("user %q chose %q", u.Name(), s)
+	}
+
+	if ready {
+		s.game.ChangeState(SiteVisitState)
 	}
 }
 

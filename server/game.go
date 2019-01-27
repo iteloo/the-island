@@ -8,11 +8,12 @@ import (
 type Site string
 
 const (
-	Forest     Site = "forest"
-	Farm       Site = "farm"
-	Hospital   Site = "hospital"
-	Watchtower Site = "watchtower"
-	Beach      Site = "beach"
+	NoSiteSelected Site = ""
+	Forest         Site = "forest"
+	Farm           Site = "farm"
+	Hospital       Site = "hospital"
+	Watchtower     Site = "watchtower"
+	Beach          Site = "beach"
 )
 
 type CommodityType string
@@ -54,6 +55,7 @@ type Game struct {
 	tick        time.Duration
 	MinPlayers  int
 	Yield       map[CommodityType]float64
+	UserSites   map[User]Site
 
 	// The user that is proposing a trade right now.
 	stagedUser      User
@@ -69,6 +71,7 @@ func NewGame(name string, connection GameConnection) *Game {
 		state:      nil,
 		Yield:      make(map[CommodityType]float64),
 		MinPlayers: MinPlayers,
+		UserSites:  map[User]Site{},
 	}
 	game.state = NewStateController(&game, WaitingState)
 	game.state.Begin()
@@ -109,7 +112,9 @@ func (g *Game) RecieveMessage(user User, message Message) {
 	switch msg := message.(type) {
 	case JoinMessage:
 		user.Message(NewWelcomeMessage(g.name, string(g.state.Name())))
-		// TODO: store effects and broadcast to new players
+		g.UserSites[user] = NoSiteSelected
+	case LeaveMessage:
+		delete(g.UserSites, user)
 	case SetNameMessage:
 		user.SetName(msg.Name)
 
