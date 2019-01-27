@@ -61,7 +61,7 @@ gameView model =
                             Html.map SiteSelectionMsg (siteSelectionView m)
 
                         SiteVisitStage m ->
-                            Html.map SiteVisitMsg (siteVisitView m)
+                            Html.map SiteVisitMsg (siteVisitView model m)
 
                         GameOverStage ->
                             gameOverView
@@ -263,8 +263,8 @@ siteSelectionView m =
             ]
 
 
-siteVisitView : SiteVisitModel -> Html SiteVisitMsg
-siteVisitView m =
+siteVisitView : GameModel -> SiteVisitModel -> Html SiteVisitMsg
+siteVisitView { inventory } m =
     div [] <|
         case m.event of
             Just e ->
@@ -283,9 +283,22 @@ siteVisitView m =
                                         []
                                 , case e.spendButton of
                                     Just rsr ->
-                                        [ button [ onClick UseResourceButton ]
-                                            -- [todo] let users choose amount
-                                            [ text <| "Use a " ++ toString rsr ]
+                                        [ text <|
+                                            "Use "
+                                                ++ toString e.resourceAmountSelected
+                                                ++ toString rsr
+                                        , button
+                                            [ onClick AddResourceSpendButton
+                                            , disabled <|
+                                                e.resourceAmountSelected
+                                                    >= Material.lookup rsr inventory
+                                            ]
+                                            [ text <| "+" ]
+                                        , button
+                                            [ onClick RemoveResourceSpendButton
+                                            , disabled <| e.resourceAmountSelected <= 0
+                                            ]
+                                            [ text <| "-" ]
                                         ]
 
                                     Nothing ->

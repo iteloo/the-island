@@ -229,40 +229,48 @@ updateSiteVisit { toGameServer } msg model =
 
                 Nothing ->
                     Debug.crash "no event, but buttons pressed"
+
+        tryModifyResourceAmountSelected diff =
+            ifEvent <|
+                \e ->
+                    -- [tofix] impl
+                    { model
+                        | event =
+                            Just
+                                { e
+                                    | resourceAmountSelected =
+                                        e.resourceAmountSelected + diff
+                                }
+                    }
+                        ! []
     in
     case msg of
         OkButton ->
             ifEvent <|
                 \e ->
                     model
-                        ! [ toGameServer
-                                (Api.EventResponse
+                        ! [ toGameServer <|
+                                Api.EventResponse
                                     { messageId = e.messageId
                                     , clickedOk = True
                                     , clickedAction = False
                                     , resourceAmount =
-                                        case e.actionButton of
-                                            Nothing ->
-                                                0
-
-                                            Just ab ->
-                                                ab.actionButtonResourceAmount
+                                        e.resourceAmountSelected
                                     }
-                                )
                           ]
 
-        UseResourceButton ->
-            ifEvent <|
-                \e ->
-                    -- [tofix] impl
-                    model ! []
+        AddResourceSpendButton ->
+            tryModifyResourceAmountSelected 1
+
+        RemoveResourceSpendButton ->
+            tryModifyResourceAmountSelected -1
 
         ActionButton ->
             ifEvent <|
                 \e ->
                     model
-                        ! [ toGameServer
-                                (Api.EventResponse
+                        ! [ toGameServer <|
+                                Api.EventResponse
                                     { messageId = e.messageId
                                     , clickedOk = False
                                     , clickedAction = True
@@ -274,7 +282,6 @@ updateSiteVisit { toGameServer } msg model =
                                             Just ab ->
                                                 ab.actionButtonResourceAmount
                                     }
-                                )
                           ]
 
 
@@ -328,6 +335,7 @@ handleAction action model =
 
                                 -- [hack] bogus
                                 , timer = Timer.init (100 * Time.second)
+                                , resourceAmountSelected = 0
                                 }
                     }
                         ! []

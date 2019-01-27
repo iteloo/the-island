@@ -52,5 +52,6 @@ type SiteSelectionMsg
 
 type SiteVisitMsg
     = OkButton
-    | UseResourceButton
+    | AddResourceSpendButton
+    | RemoveResourceSpendButton
     | ActionButton
