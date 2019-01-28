@@ -159,12 +159,19 @@ func (s *SiteSelectionController) RecieveMessage(u User, m Message) {
 type SiteVisitController struct {
 	game *Game
 	name GameState
+
+	userEventQueue  map[User][]SiteEvent
+	nextMessageID   uint64
+	messageHandlers map[uint64]SiteEvent
 }
 
 func NewSiteVisitController(game *Game) *SiteVisitController {
 	return &SiteVisitController{
-		game: game,
-		name: WaitingState,
+		game:            game,
+		name:            WaitingState,
+		userEventQueue:  map[User][]SiteEvent{},
+		nextMessageID:   0,
+		messageHandlers: map[uint64]SiteEvent{},
 	}
 }
 
@@ -176,9 +183,39 @@ func (s *SiteVisitController) Begin() {
 	s.game.connection.Broadcast(NewSetClockMessage(SiteVisitDuration))
 	s.game.SetTimeout(SiteVisitDuration)
 
-	s.game.connection.Broadcast(
-		NewEventMessage("it works!", "I'm going to sleep"),
-	)
+	// Set the initial user event queues up.
+	for user, _ := range s.game.UserSites {
+		s.userEventQueue[user] = append(
+			s.userEventQueue[user],
+			NewRepairSite(),
+		)
+	}
+
+	// Try to give all the users their initial events.
+	for user, _ := range s.game.UserSites {
+		s.GiveNewEvent(user)
+	}
+}
+
+func (s *SiteVisitController) GiveNewEvent(u User) {
+	if len(s.userEventQueue[u]) == 0 {
+		fmt.Printf("No events for %q.", u.Name())
+		return
+	}
+
+	// Pop the event out of the user's queue
+	event := s.userEventQueue[u][0]
+	s.userEventQueue[u] = s.userEventQueue[u][1:]
+
+	msg := event.Begin(s.game, u)
+
+	// Register the message handler
+	msg.MessageID = s.nextMessageID
+	s.nextMessageID += 1
+	s.messageHandlers[msg.MessageID] = event
+
+	// Send the message to the user.
+	u.Message(msg)
 }
 
 // End is called when the state is no longer active.
@@ -190,7 +227,18 @@ func (s *SiteVisitController) Timer(tick time.Duration) {
 }
 
 // RecieveMessage is called when a user sends a message to the server.
-func (s *SiteVisitController) RecieveMessage(u User, m Message) {}
+func (s *SiteVisitController) RecieveMessage(u User, m Message) {
+	switch msg := m.(type) {
+	case EventResponseMessage:
+		// Let the SiteEvent handle the user response
+		s.messageHandlers[msg.MessageID].End(s.game, u, msg)
+
+		// Send the user the next message in their queue.
+		s.GiveNewEvent(u)
+	default:
+		return
+	}
+}
 
 // NewStateController creates a state controller based on the requested state.
 func NewStateController(game *Game, state GameState) StateController {

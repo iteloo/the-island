@@ -16,6 +16,12 @@ const (
 	Beach          Site = "beach"
 )
 
+func AllSites() []Site {
+	return []Site{Forest, Farm, Hospital, Watchtower, Beach}
+}
+
+const InitialRepairState uint64 = 50
+
 type CommodityType string
 
 const (
@@ -48,14 +54,15 @@ type GameConnection interface {
 
 // Game represents the state of an individual game instance.
 type Game struct {
-	name        string
-	connection  GameConnection
-	state       StateController
-	nextTimeout time.Duration
-	tick        time.Duration
-	MinPlayers  int
-	Yield       map[CommodityType]float64
-	UserSites   map[User]Site
+	name            string
+	connection      GameConnection
+	state           StateController
+	nextTimeout     time.Duration
+	tick            time.Duration
+	MinPlayers      int
+	Yield           map[CommodityType]float64
+	UserSites       map[User]Site
+	SiteRepairState map[Site]uint64
 
 	// The user that is proposing a trade right now.
 	stagedUser      User
@@ -65,13 +72,19 @@ type Game struct {
 
 // NewGame constructs a game.
 func NewGame(name string, connection GameConnection) *Game {
+	repair_state := map[Site]uint64{}
+	for _, s := range AllSites() {
+		repair_state[s] = InitialRepairState
+	}
+
 	game := Game{
-		name:       name,
-		connection: connection,
-		state:      nil,
-		Yield:      make(map[CommodityType]float64),
-		MinPlayers: MinPlayers,
-		UserSites:  map[User]Site{},
+		name:            name,
+		connection:      connection,
+		state:           nil,
+		Yield:           make(map[CommodityType]float64),
+		MinPlayers:      MinPlayers,
+		UserSites:       map[User]Site{},
+		SiteRepairState: repair_state,
 	}
 	game.state = NewStateController(&game, WaitingState)
 	game.state.Begin()
