@@ -87,9 +87,7 @@ topBar model =
         , div [ class "game-title" ] [ text model.gameName ]
         , div [ class "timer" ]
             (List.concat
-                [ case
-                    Lens.get timer model.stage
-                  of
+                [ case model.timer of
                     Just timer ->
                         [ div [ class "timer-text" ]
                             [ text

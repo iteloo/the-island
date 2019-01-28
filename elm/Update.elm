@@ -40,7 +40,7 @@ subscriptions model =
                         << GameMsg
                         << always Shake
                     )
-                , case Lens.get timer m.stage of
+                , case m.timer of
                     Just _ ->
                         AnimationFrame.times (AppMsg << GameMsg << UpdateTimer)
 
@@ -167,11 +167,7 @@ updateGame { toServer, toMsg } msg model =
 
         UpdateTimer tick ->
             { model
-                | stage =
-                    Lens.update timer
-                        (Timer.update tick)
-                        model.stage
-                        |> Maybe.withDefault model.stage
+                | timer = Maybe.map (Timer.update tick) model.timer
             }
                 ! []
 
@@ -298,13 +294,18 @@ handleAction action model =
             tryUpdate game
                 (\m ->
                     { m
-                        | stage =
-                            Lens.update timer
-                                (Timer.setTimeLeft
-                                    (toFloat ms * Time.millisecond)
-                                )
-                                m.stage
-                                |> Maybe.withDefault m.stage
+                        | timer =
+                            Just <|
+                                let
+                                    time =
+                                        toFloat ms * Time.millisecond
+                                in
+                                case m.timer of
+                                    Nothing ->
+                                        Timer.init time
+
+                                    Just timer ->
+                                        Timer.setTimeLeft time timer
                     }
                         ! []
                 )
@@ -332,9 +333,6 @@ handleAction action model =
                                 , okButton = e.okButton
                                 , spendButton = e.spendButton
                                 , actionButton = e.actionButton
-
-                                -- [hack] bogus
-                                , timer = Timer.init (100 * Time.second)
                                 , resourceAmountSelected = 0
                                 }
                     }
@@ -373,7 +371,10 @@ changeStage stagetype model =
                             ++ toString stagetype
                         )
     in
-    ( { model | stage = newStage }
+    ( { model
+        | stage = newStage
+        , timer = Nothing
+      }
     , cmd
     )
 

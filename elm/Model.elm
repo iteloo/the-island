@@ -15,7 +15,6 @@ module Model exposing
     , initSiteSelectionModel
     , initSiteVisitModel
     , initWaitModel
-    , timer
     )
 
 import Api
@@ -24,10 +23,6 @@ import Lens exposing (PureLens)
 import Material exposing (Material, Resource)
 import Time exposing (Time)
 import Timer exposing (Timer)
-
-
-siteSelectionDuration =
-    10 * Time.second
 
 
 type alias Model =
@@ -64,6 +59,7 @@ type alias GameModel =
     , stage : Stage
     , inventory : Material Int
     , basket : Material Int
+    , timer : Maybe Timer
     }
 
 
@@ -85,7 +81,6 @@ type alias WaitModel =
 type alias SiteSelectionModel =
     { ready : Bool
     , siteSelected : Maybe Site
-    , timer : Timer
     }
 
 
@@ -103,8 +98,7 @@ type alias Event =
 -}
 type alias Extra a =
     { a
-        | timer : Timer
-        , resourceAmountSelected : Int
+        | resourceAmountSelected : Int
     }
 
 
@@ -134,6 +128,7 @@ initGameModel name =
     , stage = WaitStage initWaitModel
     , inventory = Material.empty
     , basket = Material.empty
+    , timer = Nothing
     }
 
 
@@ -147,7 +142,6 @@ initWaitModel =
 initSiteSelectionModel =
     { ready = False
     , siteSelected = Nothing
-    , timer = Timer.init siteSelectionDuration
     }
 
 
@@ -171,48 +165,3 @@ getStageType stage =
 
         GameOverStage ->
             GameOverStageType
-
-
-
--- GETTER & SETTERS
-
-
-timer : PureLens Timer Stage
-timer =
-    let
-        get stage =
-            case stage of
-                WaitStage _ ->
-                    Nothing
-
-                SiteSelectionStage m ->
-                    Just m.timer
-
-                SiteVisitStage m ->
-                    m.event |> Maybe.map .timer
-
-                GameOverStage ->
-                    Nothing
-
-        set timer stage =
-            case stage of
-                WaitStage _ ->
-                    Nothing
-
-                SiteSelectionStage m ->
-                    Just <| SiteSelectionStage { m | timer = timer }
-
-                SiteVisitStage m ->
-                    Just <|
-                        SiteVisitStage
-                            { m
-                                | event =
-                                    Maybe.map
-                                        (\e -> { e | timer = timer })
-                                        m.event
-                            }
-
-                GameOverStage ->
-                    Nothing
-    in
-    { get = get, set = set }
