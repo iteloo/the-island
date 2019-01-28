@@ -24,11 +24,11 @@ const (
 
 	// Client messages
 	ReadyAction         MessageAction = "ready"
-	JoinAction          MessageAction = "join"
+	JoinAction          MessageAction = "join_game"
 	LeaveAction         MessageAction = "leave"
 	TradeAction         MessageAction = "trade"
 	SetNameAction       MessageAction = "set_name"
-	SiteSelectionAction MessageAction = "select_site"
+	SiteSelectionAction MessageAction = "site_selected"
 	EventResponseAction MessageAction = "event_response"
 
 	// Special debug-only actions
@@ -248,13 +248,13 @@ func NewSetNameMessage(name string) SetNameMessage {
 
 type SiteSelectionMessage struct {
 	Action       string `json:"action"`
-	SiteSelected string `json:"site_selected"`
+	SiteSelected Site   `json:"site"`
 }
 
 func NewSiteSelectionMessage(site Site) SiteSelectionMessage {
 	return SiteSelectionMessage{
 		Action:       string(SiteSelectionAction),
-		SiteSelected: string(site),
+		SiteSelected: site,
 	}
 }
 
@@ -309,6 +309,10 @@ func DecodeMessage(data []byte) (Message, error) {
 		message = m
 	case string(EventResponseAction):
 		m := EventResponseMessage{}
+		err = json.Unmarshal(data, &m)
+		message = m
+	case string(SiteSelectionAction):
+		m := SiteSelectionMessage{}
 		err = json.Unmarshal(data, &m)
 		message = m
 	default:
