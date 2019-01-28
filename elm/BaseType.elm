@@ -10,6 +10,7 @@ module BaseType exposing
     )
 
 import Material exposing (Material, Resource)
+import String.Case
 
 
 type alias PlayerInfo =
@@ -32,7 +33,7 @@ allSites =
 
 siteToString : Site -> String
 siteToString =
-    toString
+    String.Case.toSnakeCaseLower << toString
 
 
 type StageType
