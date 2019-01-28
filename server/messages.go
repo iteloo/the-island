@@ -105,20 +105,20 @@ func NewPlayerInfoUpdateMessage(info []PlayerInfo) Message {
 }
 
 type EventMessage struct {
-	Action                     string `json:"action"`
-	MessageID                  int    `json:"message_id"`
-	Title                      string `json:"title"`
-	Description                string `json:"description"`
-	HasOK                      bool   `json:"has_ok"`
-	OKButtonText               string `json:"ok_button_text"`
-	UsesResource               bool   `json:"uses_resource"`
-	UsedResourceName           string `json:"used_resource_name"`
-	HasActionButton            bool   `json:"has_action_button"`
-	ActionButtonName           string `json:"action_button_name"`
-	ActionButtonResource       string `json:"action_button_resource"`
-	ActionButtonResourceAmount int    `json:"action_button_resource_amount"`
-	HasSpendButton             bool   `json:"has_spend_button"`
-	SpendButtonResource        string `json:"spend_button_resource"`
+	Action                     string        `json:"action"`
+	MessageID                  uint64        `json:"message_id"`
+	Title                      string        `json:"title"`
+	Description                string        `json:"description"`
+	HasOK                      bool          `json:"has_ok"`
+	OKButtonText               string        `json:"ok_button_text"`
+	UsesResource               bool          `json:"uses_resource"`
+	UsedResourceName           string        `json:"used_resource_name"`
+	HasActionButton            bool          `json:"has_action_button"`
+	ActionButtonName           string        `json:"action_button_name"`
+	ActionButtonResource       string        `json:"action_button_resource"`
+	ActionButtonResourceAmount int           `json:"action_button_resource_amount"`
+	HasSpendButton             bool          `json:"has_spend_button"`
+	SpendButtonResource        CommodityType `json:"spend_button_resource"`
 }
 
 func NewEventMessage(title, description string) EventMessage {
@@ -143,6 +143,11 @@ func (m *EventMessage) WithActionButton(text string, resource CommodityType, amo
 	m.ActionButtonResource = string(resource)
 	m.ActionButtonResourceAmount = amount
 	return m
+}
+
+func (m *EventMessage) WithSpendButton(resource CommodityType) {
+	m.HasSpendButton = true
+	m.SpendButtonResource = resource
 }
 
 // Server-to-client messages:
@@ -173,13 +178,13 @@ func NewWelcomeMessage(game, state string) Message {
 // Client messages
 
 type EventResponseMessage struct {
-	MessageID      int  `json:"message_id"`
-	ClickedOK      bool `json:"clicked_ok"`
-	ClickedAction  bool `json:"clicked_action"`
-	ResourceAmount int  `json:"resource_amount"`
+	MessageID      uint64 `json:"message_id"`
+	ClickedOK      bool   `json:"clicked_ok"`
+	ClickedAction  bool   `json:"clicked_action"`
+	ResourceAmount int    `json:"resource_amount"`
 }
 
-func NewEventResponseMessage(id int, clicked_ok bool, clicked_action bool, amount int) EventResponseMessage {
+func NewEventResponseMessage(id uint64, clicked_ok bool, clicked_action bool, amount int) EventResponseMessage {
 	return EventResponseMessage{
 		MessageID:      id,
 		ClickedOK:      clicked_ok,
