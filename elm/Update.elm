@@ -156,7 +156,7 @@ updateGame { toServer, toMsg } msg model =
                 model
 
         SiteVisitMsg msg ->
-            tryUpdate siteVisit
+            tryUpdateGlobal siteVisit
                 (updateSiteVisit
                     { toGameServer = toGameServer
                     , toMsg = toMsg << SiteVisitMsg
@@ -215,11 +215,11 @@ updateSiteSelection { toGameServer } msg model =
 updateSiteVisit :
     GameCtx SiteVisitMsg
     -> SiteVisitMsg
-    -> Upd SiteVisitModel
-updateSiteVisit { toGameServer } msg model =
+    -> Upd ( SiteVisitModel, GameModel )
+updateSiteVisit { toGameServer } msg ( siteVisitModel, gameModel ) =
     let
         ifEvent handler =
-            case model.event of
+            case siteVisitModel.event of
                 Just e ->
                     handler e
 
@@ -230,21 +230,27 @@ updateSiteVisit { toGameServer } msg model =
             ifEvent <|
                 \e ->
                     -- [tofix] impl
-                    { model
+                    ( { siteVisitModel
                         | event =
                             Just
                                 { e
                                     | resourceAmountSelected =
                                         e.resourceAmountSelected + diff
                                 }
-                    }
+                      }
+                      -- [tofix] impl
+                    , gameModel
+                    )
                         ! []
     in
     case msg of
         OkButton ->
             ifEvent <|
                 \e ->
-                    model
+                    ( { siteVisitModel | event = Nothing }
+                    , -- [tofix] impl
+                      gameModel
+                    )
                         ! [ toGameServer <|
                                 Api.EventResponse
                                     { messageId = e.messageId
@@ -264,7 +270,10 @@ updateSiteVisit { toGameServer } msg model =
         ActionButton ->
             ifEvent <|
                 \e ->
-                    model
+                    ( { siteVisitModel | event = Nothing }
+                    , -- [tofix] impl
+                      gameModel
+                    )
                         ! [ toGameServer <|
                                 Api.EventResponse
                                     { messageId = e.messageId
@@ -486,6 +495,28 @@ tryUpdate lens upd model =
             Debug.crash "tryUpdate failed"
 
 
+tryUpdateGlobal :
+    Lens submodel (Eff submodel) model (Eff model)
+    -> Upd ( submodel, model )
+    -> model
+    -> Eff model
+tryUpdateGlobal lens upd model =
+    let
+        lensUpd subm m =
+            let
+                ( ( updatedSubm, updatedM ), cmd ) =
+                    upd ( subm, m )
+            in
+            ( ( updatedSubm, cmd ), updatedM )
+    in
+    case Lens.updateGlobal lens lensUpd model of
+        Just m ->
+            m
+
+        Nothing ->
+            Debug.crash "tryUpdateGlobal failed"
+
+
 updateIf :
     Lens submodel updatedSubmodel model (Eff model)
     -> (submodel -> model -> Eff model)
@@ -497,4 +528,4 @@ updateIf lens upd model =
             m
 
         Nothing ->
-            Debug.crash "tryUpdate failed"
+            Debug.crash "updateIf failed"
