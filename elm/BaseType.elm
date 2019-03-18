@@ -4,7 +4,6 @@ module BaseType exposing
     , Site(..)
     , StageType(..)
     , Uber(..)
-    , actionButtonMaterial
     , add
     , allSites
     , siteToString
@@ -49,12 +48,6 @@ type alias ActionButtonInfo =
     , actionButtonResource : Resource
     , actionButtonResourceAmount : Int
     }
-
-
-actionButtonMaterial : ActionButtonInfo -> Material Int
-actionButtonMaterial { actionButtonResource, actionButtonResourceAmount } =
-    Material.empty
-        |> Material.set actionButtonResource actionButtonResourceAmount
 
 
 type Uber number

@@ -262,7 +262,8 @@ updateSiteVisit { toGameServer } msg ( siteVisitModel, gameModel ) =
                                 | inventory =
                                     case
                                         Material.trySubtract
-                                            (Material.singleResourceType resource
+                                            (Material.singleResourceType
+                                                resource
                                                 e.resourceAmountSelected
                                             )
                                             gameModel.inventory
@@ -296,35 +297,43 @@ updateSiteVisit { toGameServer } msg ( siteVisitModel, gameModel ) =
             -- [assumpt] button only enabled if enough resource in inventory
             ifEvent <|
                 \e ->
-                    ( { siteVisitModel | event = Nothing }
-                    , { gameModel
-                        | inventory =
-                            case
-                                e.actionButton
-                                    |> Maybe.map actionButtonMaterial
-                                    |> Maybe.andThen (flip Material.trySubtract gameModel.inventory)
-                            of
-                                Just newInv ->
-                                    newInv
+                    case e.actionButton of
+                        Nothing ->
+                            Debug.crash "in ActionButton msg handler: expected actionButton model to exist"
 
-                                Nothing ->
-                                    Debug.crash "in ActionButton msg handler: not enough in inventory"
-                      }
-                    )
-                        ! [ toGameServer <|
-                                Api.EventResponse
-                                    { messageId = e.messageId
-                                    , clickedOk = False
-                                    , clickedAction = True
-                                    , resourceAmount =
-                                        case e.actionButton of
-                                            Nothing ->
-                                                0
+                        Just { actionButtonResource, actionButtonResourceAmount } ->
+                            ( { siteVisitModel | event = Nothing }
+                            , { gameModel
+                                | inventory =
+                                    case
+                                        Material.trySubtract
+                                            (Material.singleResourceType
+                                                actionButtonResource
+                                                actionButtonResourceAmount
+                                            )
+                                            gameModel.inventory
+                                    of
+                                        Just newInv ->
+                                            newInv
 
-                                            Just ab ->
-                                                ab.actionButtonResourceAmount
-                                    }
-                          ]
+                                        Nothing ->
+                                            Debug.crash "in ActionButton msg handler: not enough in inventory"
+                              }
+                            )
+                                ! [ toGameServer <|
+                                        Api.EventResponse
+                                            { messageId = e.messageId
+                                            , clickedOk = False
+                                            , clickedAction = True
+                                            , resourceAmount =
+                                                case e.actionButton of
+                                                    Nothing ->
+                                                        0
+
+                                                    Just ab ->
+                                                        ab.actionButtonResourceAmount
+                                            }
+                                  ]
 
 
 handleAction : Api.Action -> Upd AppModel
