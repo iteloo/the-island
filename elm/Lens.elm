@@ -1,12 +1,12 @@
-module Lens
-    exposing
-        ( Lens
-        , PureLens
-        , get
-        , goIn
-        , update
-        , updateIf
-        )
+module Lens exposing
+    ( Lens
+    , PureLens
+    , get
+    , goIn
+    , update
+    , updateGlobal
+    , updateIf
+    )
 
 
 type alias Lens submodel updatedSubmodel model updatedModel =
@@ -51,6 +51,15 @@ update :
     -> Maybe updatedModel
 update { get, set } upd model =
     get model |> Maybe.andThen (upd >> flip set model)
+
+
+updateGlobal :
+    Lens submodel updatedSubmodel model updatedModel
+    -> (submodel -> model -> ( updatedSubmodel, model ))
+    -> model
+    -> Maybe updatedModel
+updateGlobal { get, set } upd model =
+    get model |> Maybe.andThen (flip upd model >> uncurry set)
 
 
 updateIf :

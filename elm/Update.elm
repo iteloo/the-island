@@ -156,7 +156,7 @@ updateGame { toServer, toMsg } msg model =
                 model
 
         SiteVisitMsg msg ->
-            tryUpdate siteVisit
+            tryUpdateGlobal siteVisit
                 (updateSiteVisit
                     { toGameServer = toGameServer
                     , toMsg = toMsg << SiteVisitMsg
@@ -215,36 +215,65 @@ updateSiteSelection { toGameServer } msg model =
 updateSiteVisit :
     GameCtx SiteVisitMsg
     -> SiteVisitMsg
-    -> Upd SiteVisitModel
-updateSiteVisit { toGameServer } msg model =
+    -> Upd ( SiteVisitModel, GameModel )
+updateSiteVisit { toGameServer } msg ( siteVisitModel, gameModel ) =
     let
         ifEvent handler =
-            case model.event of
+            case siteVisitModel.event of
                 Just e ->
                     handler e
 
                 Nothing ->
                     Debug.crash "no event, but buttons pressed"
 
-        tryModifyResourceAmountSelected diff =
+        modifyResourceAmountSelected diff =
             ifEvent <|
                 \e ->
-                    -- [tofix] impl
-                    { model
+                    ( { siteVisitModel
                         | event =
                             Just
                                 { e
                                     | resourceAmountSelected =
                                         e.resourceAmountSelected + diff
                                 }
-                    }
+                      }
+                      -- [note] inventory only updated when ok pressed
+                    , gameModel
+                    )
                         ! []
     in
     case msg of
         OkButton ->
+            -- [assumpt] button only enabled if enough resource in inventory
             ifEvent <|
                 \e ->
-                    model
+                    ( { siteVisitModel | event = Nothing }
+                    , case e.spendButton of
+                        Nothing ->
+                            if e.resourceAmountSelected /= 0 then
+                                Debug.crash "in OkButton msg handler: nonzero resource selected when no spend button"
+
+                            else
+                                gameModel
+
+                        Just resource ->
+                            { gameModel
+                                | inventory =
+                                    case
+                                        Material.trySubtract
+                                            (Material.singleResourceType
+                                                resource
+                                                e.resourceAmountSelected
+                                            )
+                                            gameModel.inventory
+                                    of
+                                        Just newInv ->
+                                            newInv
+
+                                        Nothing ->
+                                            Debug.crash "in OkButton msg handler: not enough in inventory"
+                            }
+                    )
                         ! [ toGameServer <|
                                 Api.EventResponse
                                     { messageId = e.messageId
@@ -256,29 +285,54 @@ updateSiteVisit { toGameServer } msg model =
                           ]
 
         AddResourceSpendButton ->
-            tryModifyResourceAmountSelected 1
+            -- [assumpt] button only enabled if enough resource in inventory
+            modifyResourceAmountSelected 1
 
         RemoveResourceSpendButton ->
-            tryModifyResourceAmountSelected -1
+            -- [assumpt] button only enabled if amount selected > 0
+            modifyResourceAmountSelected -1
 
         ActionButton ->
+            -- [assumpt] button only enabled if enough resource in inventory
             ifEvent <|
                 \e ->
-                    model
-                        ! [ toGameServer <|
-                                Api.EventResponse
-                                    { messageId = e.messageId
-                                    , clickedOk = False
-                                    , clickedAction = True
-                                    , resourceAmount =
-                                        case e.actionButton of
-                                            Nothing ->
-                                                0
+                    case e.actionButton of
+                        Nothing ->
+                            Debug.crash "in ActionButton msg handler: expected actionButton model to exist"
 
-                                            Just ab ->
-                                                ab.actionButtonResourceAmount
-                                    }
-                          ]
+                        Just { actionButtonResource, actionButtonResourceAmount } ->
+                            ( { siteVisitModel | event = Nothing }
+                            , { gameModel
+                                | inventory =
+                                    case
+                                        Material.trySubtract
+                                            (Material.singleResourceType
+                                                actionButtonResource
+                                                actionButtonResourceAmount
+                                            )
+                                            gameModel.inventory
+                                    of
+                                        Just newInv ->
+                                            newInv
+
+                                        Nothing ->
+                                            Debug.crash "in ActionButton msg handler: not enough in inventory"
+                              }
+                            )
+                                ! [ toGameServer <|
+                                        Api.EventResponse
+                                            { messageId = e.messageId
+                                            , clickedOk = False
+                                            , clickedAction = True
+                                            , resourceAmount =
+                                                case e.actionButton of
+                                                    Nothing ->
+                                                        0
+
+                                                    Just ab ->
+                                                        ab.actionButtonResourceAmount
+                                            }
+                                  ]
 
 
 handleAction : Api.Action -> Upd AppModel
@@ -486,6 +540,28 @@ tryUpdate lens upd model =
             Debug.crash "tryUpdate failed"
 
 
+tryUpdateGlobal :
+    Lens submodel (Eff submodel) model (Eff model)
+    -> Upd ( submodel, model )
+    -> model
+    -> Eff model
+tryUpdateGlobal lens upd model =
+    let
+        lensUpd subm m =
+            let
+                ( ( updatedSubm, updatedM ), cmd ) =
+                    upd ( subm, m )
+            in
+            ( ( updatedSubm, cmd ), updatedM )
+    in
+    case Lens.updateGlobal lens lensUpd model of
+        Just m ->
+            m
+
+        Nothing ->
+            Debug.crash "tryUpdateGlobal failed"
+
+
 updateIf :
     Lens submodel updatedSubmodel model (Eff model)
     -> (submodel -> model -> Eff model)
@@ -497,4 +573,4 @@ updateIf lens upd model =
             m
 
         Nothing ->
-            Debug.crash "tryUpdate failed"
+            Debug.crash "updateIf failed"
