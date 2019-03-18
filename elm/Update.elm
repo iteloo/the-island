@@ -226,10 +226,9 @@ updateSiteVisit { toGameServer } msg ( siteVisitModel, gameModel ) =
                 Nothing ->
                     Debug.crash "no event, but buttons pressed"
 
-        tryModifyResourceAmountSelected diff =
+        modifyResourceAmountSelected diff =
             ifEvent <|
                 \e ->
-                    -- [tofix] impl
                     ( { siteVisitModel
                         | event =
                             Just
@@ -238,7 +237,7 @@ updateSiteVisit { toGameServer } msg ( siteVisitModel, gameModel ) =
                                         e.resourceAmountSelected + diff
                                 }
                       }
-                      -- [tofix] impl
+                      -- [note] inventory only updated when ok pressed
                     , gameModel
                     )
                         ! []
@@ -287,11 +286,11 @@ updateSiteVisit { toGameServer } msg ( siteVisitModel, gameModel ) =
 
         AddResourceSpendButton ->
             -- [assumpt] button only enabled if enough resource in inventory
-            tryModifyResourceAmountSelected 1
+            modifyResourceAmountSelected 1
 
         RemoveResourceSpendButton ->
             -- [assumpt] button only enabled if amount selected > 0
-            tryModifyResourceAmountSelected -1
+            modifyResourceAmountSelected -1
 
         ActionButton ->
             -- [assumpt] button only enabled if enough resource in inventory
