@@ -12,6 +12,7 @@ module Material exposing
     , resourceFromString
     , set
     , shorthand
+    , singleResourceType
     , toList
     , traverseMaybe
     , trySubtract
@@ -93,6 +94,11 @@ create f =
 empty : Material Int
 empty =
     create (always 0)
+
+
+singleResourceType : Resource -> Int -> Material Int
+singleResourceType resource number =
+    empty |> set resource number
 
 
 toList : Material a -> List ( Resource, a )
@@ -187,6 +193,8 @@ fold acc b =
     List.foldr (uncurry acc) b << toList
 
 
+{-| Subtracts first from second, but only return something if it's nonnnegative
+-}
 trySubtract : Material number -> Material number -> Maybe (Material number)
 trySubtract =
     curry <|

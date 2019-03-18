@@ -245,11 +245,34 @@ updateSiteVisit { toGameServer } msg ( siteVisitModel, gameModel ) =
     in
     case msg of
         OkButton ->
+            -- [assumpt] button only enabled if enough resource in inventory
             ifEvent <|
                 \e ->
                     ( { siteVisitModel | event = Nothing }
-                    , -- [tofix] impl
-                      gameModel
+                    , case e.spendButton of
+                        Nothing ->
+                            if e.resourceAmountSelected /= 0 then
+                                Debug.crash "in OkButton msg handler: nonzero resource selected when no spend button"
+
+                            else
+                                gameModel
+
+                        Just resource ->
+                            { gameModel
+                                | inventory =
+                                    case
+                                        Material.trySubtract
+                                            (Material.singleResourceType resource
+                                                e.resourceAmountSelected
+                                            )
+                                            gameModel.inventory
+                                    of
+                                        Just newInv ->
+                                            newInv
+
+                                        Nothing ->
+                                            Debug.crash "in OkButton msg handler: not enough in inventory"
+                            }
                     )
                         ! [ toGameServer <|
                                 Api.EventResponse
@@ -262,17 +285,31 @@ updateSiteVisit { toGameServer } msg ( siteVisitModel, gameModel ) =
                           ]
 
         AddResourceSpendButton ->
+            -- [assumpt] button only enabled if enough resource in inventory
             tryModifyResourceAmountSelected 1
 
         RemoveResourceSpendButton ->
+            -- [assumpt] button only enabled if amount selected > 0
             tryModifyResourceAmountSelected -1
 
         ActionButton ->
+            -- [assumpt] button only enabled if enough resource in inventory
             ifEvent <|
                 \e ->
                     ( { siteVisitModel | event = Nothing }
-                    , -- [tofix] impl
-                      gameModel
+                    , { gameModel
+                        | inventory =
+                            case
+                                e.actionButton
+                                    |> Maybe.map actionButtonMaterial
+                                    |> Maybe.andThen (flip Material.trySubtract gameModel.inventory)
+                            of
+                                Just newInv ->
+                                    newInv
+
+                                Nothing ->
+                                    Debug.crash "in ActionButton msg handler: not enough in inventory"
+                      }
                     )
                         ! [ toGameServer <|
                                 Api.EventResponse
