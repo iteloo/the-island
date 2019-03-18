@@ -105,7 +105,7 @@ updateApp ctx msg model =
                         |> handleAction action
 
                 Err e ->
-                    model ! []
+                    Debug.crash <| "Error in ServerMsgReceived: " ++ e
 
 
 updateWelcome : Ctx JoinGameMsg -> JoinGameMsg -> Upd JoinGameModel
