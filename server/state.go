@@ -19,6 +19,8 @@ const (
 	// will proceed past the Waiting stage.
 	MinPlayers int = 1
 
+	MaxEventsPerRound int = 10
+
 	// Amount of time to wait while site is selected.
 	SiteSelectionDuration time.Duration = 5 * time.Second
 	// Amount of time to spend at the site when visiting.
@@ -189,6 +191,21 @@ func (s *SiteVisitController) Begin() {
 			s.userEventQueue[user],
 			NewRepairSite(),
 		)
+	}
+
+	// Fill up the queues with some more events.
+	for user, _ := range s.game.UserSites {
+		for i := 0; i < MaxEventsPerRound; i++ {
+			event := GenerateEvent(s.game, user)
+			if event == nil {
+				continue
+			}
+
+			s.userEventQueue[user] = append(
+				s.userEventQueue[user],
+				*event,
+			)
+		}
 	}
 
 	// Try to give all the users their initial events.
