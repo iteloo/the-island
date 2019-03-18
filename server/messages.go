@@ -115,7 +115,7 @@ type EventMessage struct {
 	// Must have enough resources to active action button. Positive
 	// means user spends resource. Negative means user gets resource.
 	HasActionButton            bool   `json:"has_action_button"`
-	ActionButtonName           string `json:"action_button_name"`
+	ActionButtonText           string `json:"action_button_text"`
 	ActionButtonResource       string `json:"action_button_resource"`
 	ActionButtonResourceAmount int    `json:"action_button_resource_amount"`
 
@@ -142,7 +142,7 @@ func (m *EventMessage) WithOKButton(text string) *EventMessage {
 
 func (m *EventMessage) WithActionButton(text string, resource CommodityType, amount int) *EventMessage {
 	m.HasActionButton = true
-	m.ActionButtonName = text
+	m.ActionButtonText = text
 	m.ActionButtonResource = string(resource)
 	m.ActionButtonResourceAmount = amount
 	return m
