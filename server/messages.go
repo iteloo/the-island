@@ -116,6 +116,9 @@ type EventMessage struct {
 	// a follow-up message
 	HasSubsequentStatusUpdate bool `json:"has_subsequent_status_update"`
 
+	// If set, modify the user's health by this much.
+	HealthModifier int
+
 	// Must have enough resources to active action button. Positive
 	// means user spends resource. Negative means user gets resource.
 	HasActionButton            bool   `json:"has_action_button"`

@@ -108,9 +108,68 @@ func (e GetResource) End(g *Game, u User, r EventResponseMessage) *EventMessage 
 	return nil
 }
 
+type Attack struct{}
+
+func NewAttack() Attack {
+	return Attack{}
+}
+
+func (e Attack) Mods(g *Game, u User) int {
+	site := g.UserSites[u]
+
+	switch site {
+	case Forest:
+		return 100
+	case Farm:
+		return 100
+	case Hospital:
+		return 100
+	case Watchtower:
+		return 50
+	}
+
+	return 0
+}
+
+func (e Attack) Begin(g *Game, u User) EventMessage {
+	site := g.UserSites[u]
+	var title string
+	switch site {
+	case Forest:
+		title = fmt.Sprintf("A bear is attacking you!")
+	case Farm:
+		title = fmt.Sprintf("A rabbit is attacking you!")
+	case Hospital:
+		title = fmt.Sprintf("A bat is attacking you!")
+	case Watchtower:
+		title = fmt.Sprintf("An owl is attacking you!")
+	}
+
+	description := fmt.Sprintf("You have a chance to shoot it, if you have any bullets!")
+	msg := NewEventMessage(title, description)
+	msg.HasSubsequentStatusUpdate = true
+	msg.WithSpendButton(Bullet)
+
+	return msg
+}
+
+func (e Attack) End(g *Game, u User, r EventResponseMessage) *EventMessage {
+	msg := NewEventMessage("The animal bites you!", "It's very painful!")
+	msg.HealthModifier = -1
+
+	if r.ResourceAmount > 0 {
+		msg.Title = fmt.Sprintf("You shot the animal.")
+		msg.Description = fmt.Sprintf("In an act of heroic bravery, you shot the animal and saved yourself")
+		msg.HealthModifier = 0
+	}
+
+	return &msg
+}
+
 func GenerateEvent(g *Game, u User) *SiteEvent {
 	allEvents := []SiteEvent{
 		NewGetResource(),
+		NewAttack(),
 	}
 
 	choice := rand.Intn(1000)
