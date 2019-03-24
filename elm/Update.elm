@@ -349,17 +349,11 @@ handleAction action model =
                 (\m ->
                     { m
                         | timer =
-                            Just <|
-                                let
-                                    time =
-                                        toFloat ms * Time.millisecond
-                                in
-                                case m.timer of
-                                    Nothing ->
-                                        Timer.init time
-
-                                    Just timer ->
-                                        Timer.setTimeLeft time timer
+                            let
+                                time =
+                                    toFloat ms * Time.millisecond
+                            in
+                            Just <| Timer.init time
                     }
                         ! []
                 )
