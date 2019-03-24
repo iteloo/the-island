@@ -89,20 +89,7 @@ actionHelp a =
 
         "trade_completed" ->
             D.map TradeCompleted <|
-                D.field "materials"
-                    (D.string
-                        |> D.andThen
-                            (D.decodeString (material D.int)
-                                >> (\r ->
-                                        case r of
-                                            Ok mat ->
-                                                D.succeed mat
-
-                                            Err e ->
-                                                D.fail e
-                                   )
-                            )
-                    )
+                D.field "materials" (material D.int)
 
         "event" ->
             -- [todo] add better logic
