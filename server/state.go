@@ -19,12 +19,16 @@ const (
 	// will proceed past the Waiting stage.
 	MinPlayers int = 1
 
-	MaxEventsPerRound int = 10
+	MaxEventsPerRound int = 3
 
 	// Amount of time to wait while site is selected.
-	SiteSelectionDuration time.Duration = 5 * time.Second
-	// Amount of time to spend at the site when visiting.
-	SiteVisitDuration time.Duration = 10 * time.Second
+	SiteSelectionDuration time.Duration = 2 * time.Second
+	// Number of rounds during the site visit.
+	NumSiteVisitRounds int = 5
+	// Length of each round
+	SiteVisitRoundDuration time.Duration = 2 * time.Second
+	// Time allocated for status updates, if any
+	SiteVisitStatusDuration time.Duration = 2 * time.Second
 )
 
 type StateController interface {
@@ -162,18 +166,24 @@ type SiteVisitController struct {
 	game *Game
 	name GameState
 
-	userEventQueue  map[User][]SiteEvent
-	nextMessageID   uint64
-	messageHandlers map[uint64]SiteEvent
+	userEventQueue      map[User][]SiteEvent
+	nextMessageID       uint64
+	messageHandlers     map[uint64]SiteEvent
+	eventFinishHandlers map[User]uint64
+
+	round       int
+	statusPhase bool
 }
 
 func NewSiteVisitController(game *Game) *SiteVisitController {
 	return &SiteVisitController{
-		game:            game,
-		name:            WaitingState,
-		userEventQueue:  map[User][]SiteEvent{},
-		nextMessageID:   0,
-		messageHandlers: map[uint64]SiteEvent{},
+		game:                game,
+		name:                WaitingState,
+		userEventQueue:      map[User][]SiteEvent{},
+		nextMessageID:       0,
+		messageHandlers:     map[uint64]SiteEvent{},
+		eventFinishHandlers: map[User]uint64{},
+		round:               0,
 	}
 }
 
@@ -182,10 +192,10 @@ func (s *SiteVisitController) Name() GameState { return s.name }
 
 // Begin is called when the state becomes active.
 func (s *SiteVisitController) Begin() {
-	s.game.connection.Broadcast(NewSetClockMessage(SiteVisitDuration))
-	s.game.SetTimeout(SiteVisitDuration)
+	s.game.connection.Broadcast(NewSetClockMessage(SiteVisitRoundDuration))
+	s.game.SetTimeout(SiteVisitRoundDuration)
 
-	// Set the initial user event queues up.
+	// Add the repair event tot he user queue.
 	for user, _ := range s.game.UserSites {
 		s.userEventQueue[user] = append(
 			s.userEventQueue[user],
@@ -193,7 +203,7 @@ func (s *SiteVisitController) Begin() {
 		)
 	}
 
-	// Fill up the queues with some more events.
+	// Fill up the queues with some more random events.
 	for user, _ := range s.game.UserSites {
 		for i := 0; i < MaxEventsPerRound; i++ {
 			event := GenerateEvent(s.game, user)
@@ -231,6 +241,18 @@ func (s *SiteVisitController) GiveNewEvent(u User) {
 	s.nextMessageID += 1
 	s.messageHandlers[msg.MessageID] = event
 
+	// If no subsequent follow-on message exists, the timeout
+	// is actually the sum of the round duration + status
+	timer := SiteVisitRoundDuration + SiteVisitStatusDuration
+
+	if msg.HasSubsequentStatusUpdate {
+		s.eventFinishHandlers[u] = msg.MessageID
+		timer = SiteVisitRoundDuration
+	}
+
+	// Inform the user how long this event will take to handle.
+	u.Message(NewSetClockMessage(timer))
+
 	// Send the message to the user.
 	u.Message(msg)
 }
@@ -238,20 +260,71 @@ func (s *SiteVisitController) GiveNewEvent(u User) {
 // End is called when the state is no longer active.
 func (s *SiteVisitController) End() {}
 
+func (s *SiteVisitController) HandleStatusPhase() {
+	for u, i := range s.eventFinishHandlers {
+		responder, ok := s.messageHandlers[i]
+		// If the user already responded, the responder will have been
+		// deleted, and we don't need to take any action here.
+		if ok {
+			response := responder.End(s.game, u, EventResponseMessage{})
+			delete(s.messageHandlers, i)
+
+			// Some events have follow-on short status updates. If so,
+			// send the status update to the user immediately.
+			if response != nil {
+				u.Message(response)
+			}
+		}
+	}
+	s.game.SetTimeout(SiteVisitStatusDuration)
+}
+
+func (s *SiteVisitController) HandleEventPhase() {
+	s.round += 1
+	if s.round == NumSiteVisitRounds {
+		s.game.ChangeState(SiteSelectionState)
+		return
+	}
+
+	// Send everyone a new event
+	for user, _ := range s.game.UserSites {
+		s.GiveNewEvent(user)
+	}
+
+	// Set another timer.
+	s.game.SetTimeout(SiteVisitRoundDuration)
+}
+
 // Timer is called when a timeout occurs.
 func (s *SiteVisitController) Timer(tick time.Duration) {
-	s.game.ChangeState(SiteSelectionState)
+	s.statusPhase = !s.statusPhase
+
+	if s.statusPhase {
+		s.HandleStatusPhase()
+	} else {
+		s.HandleEventPhase()
+	}
 }
 
 // RecieveMessage is called when a user sends a message to the server.
 func (s *SiteVisitController) RecieveMessage(u User, m Message) {
 	switch msg := m.(type) {
 	case EventResponseMessage:
-		// Let the SiteEvent handle the user response
-		s.messageHandlers[msg.MessageID].End(s.game, u, msg)
+		// It's possible that the responder has already been called
+		// due to a timer running over. So don't double-handle the event -
+		// just ignore the response.
+		responder, ok := s.messageHandlers[msg.MessageID]
+		if ok {
+			response := responder.End(s.game, u, msg)
+			delete(s.messageHandlers, msg.MessageID)
 
-		// Send the user the next message in their queue.
-		s.GiveNewEvent(u)
+			// Some events have follow-on short status updates. If so,
+			// send the status update to the user immediately.
+			if response != nil {
+				u.Message(response)
+			}
+		}
+
 	default:
 		return
 	}

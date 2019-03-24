@@ -10,7 +10,11 @@ type SiteEvent interface {
 	Mods(*Game, User) int
 
 	Begin(*Game, User) EventMessage
-	End(*Game, User, EventResponseMessage)
+
+	// If the end message returns nil, no status update. If
+	// it returns an EventMessage, it should be the status resulting
+	// from the event decision.
+	End(*Game, User, EventResponseMessage) *EventMessage
 }
 
 type RepairSite struct{}
@@ -27,11 +31,24 @@ func (e RepairSite) Begin(g *Game, u User) EventMessage {
 
 	msg := NewEventMessage(title, description)
 	msg.WithSpendButton(Log)
+	msg.HasSubsequentStatusUpdate = true
 	return msg
 }
-func (e RepairSite) End(g *Game, u User, r EventResponseMessage) {
+func (e RepairSite) End(g *Game, u User, r EventResponseMessage) *EventMessage {
 	site := g.UserSites[u]
 	g.SiteRepairState[site] += uint64(r.ResourceAmount)
+
+	if r.ResourceAmount > 0 {
+		title := fmt.Sprintf("Repaired %s.", site)
+		description := fmt.Sprintf("Thanks to your hard work, the %s now looks about %d%% functional.", site, g.SiteRepairState[site])
+		msg := NewEventMessage(title, description)
+		return &msg
+	}
+
+	title := fmt.Sprintf("Didn't repair %s.", site)
+	description := fmt.Sprintf("You're so lazy")
+	msg := NewEventMessage(title, description)
+	return &msg
 }
 
 type GetResource struct{}
@@ -87,7 +104,9 @@ func (e GetResource) Begin(g *Game, u User) EventMessage {
 	return msg
 }
 
-func (e GetResource) End(g *Game, u User, r EventResponseMessage) {}
+func (e GetResource) End(g *Game, u User, r EventResponseMessage) *EventMessage {
+	return nil
+}
 
 func GenerateEvent(g *Game, u User) *SiteEvent {
 	allEvents := []SiteEvent{

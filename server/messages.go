@@ -112,6 +112,10 @@ type EventMessage struct {
 	HasOK        bool   `json:"has_ok"`
 	OKButtonText string `json:"ok_button_text"`
 
+	// If set, the event requires resolution early and will supply
+	// a follow-up message
+	HasSubsequentStatusUpdate bool `json:"has_subsequent_status_update"`
+
 	// Must have enough resources to active action button. Positive
 	// means user spends resource. Negative means user gets resource.
 	HasActionButton            bool   `json:"has_action_button"`
