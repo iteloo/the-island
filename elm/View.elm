@@ -49,7 +49,7 @@ joinGameView model =
 
 gameView : GameModel -> Html GameMsg
 gameView model =
-    div [ class "view" ] <|
+    div [ class "game-view" ] <|
         List.concat
             [ [ topBar model
               , div [ class "active-state" ]
@@ -292,13 +292,36 @@ readyOrWaitingIcon state =
 siteSelectionView : SiteSelectionModel -> Html SiteSelectionMsg
 siteSelectionView m =
     let
-        siteButton site =
-            button [ onClick (SiteSelected site) ]
+        siteButton mSiteSelected site =
+            a
+                [ class "site-button"
+                , class (siteToString site ++ "-button")
+                , case mSiteSelected |> Maybe.map ((==) site) of
+                    Just True ->
+                        class "site-button-selected"
+
+                    _ ->
+                        class ""
+                , onClick (SiteSelected site)
+                ]
                 [ text <| siteToString site ]
     in
     div [] <|
         List.concat
-            [ List.map siteButton allSites
+            [ [ div []
+                    [ text """It's getting dark... Use this time to discuss
+                     the day's finding with the group and plan the next day."""
+                    ]
+              , div [] [ text """Remember, your
+             goal is to leave the island – tap the icon on the top-right corner
+             of the screen to see how to do that.""" ]
+              , div []
+                    [ text """Select the site you'd like to visit tomorrow.
+                      The night will be over when everyone's made a selection:
+                        """ ]
+              , div [ class "site-buttons-container" ] <|
+                    List.map (siteButton m.siteSelected) allSites
+              ]
             ]
 
 
