@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -171,7 +172,6 @@ type SiteVisitController struct {
 	messageHandlers     map[uint64]SiteEvent
 	eventFinishHandlers map[User]uint64
 
-	round       int
 	statusPhase bool
 }
 
@@ -183,27 +183,22 @@ func NewSiteVisitController(game *Game) *SiteVisitController {
 		nextMessageID:       0,
 		messageHandlers:     map[uint64]SiteEvent{},
 		eventFinishHandlers: map[User]uint64{},
-		round:               0,
 	}
 }
 
 // Name returns the name of the current state.
 func (s *SiteVisitController) Name() GameState { return s.name }
 
+func ShuffleQueue(e []SiteEvent) {
+	rand.Shuffle(len(e), func(i, j int) { e[i], e[j] = e[j], e[i] })
+}
+
 // Begin is called when the state becomes active.
 func (s *SiteVisitController) Begin() {
 	s.game.connection.Broadcast(NewSetClockMessage(SiteVisitRoundDuration))
 	s.game.SetTimeout(SiteVisitRoundDuration)
 
-	// Add the repair event tot he user queue.
-	for user, _ := range s.game.UserSites {
-		s.userEventQueue[user] = append(
-			s.userEventQueue[user],
-			NewRepairSite(),
-		)
-	}
-
-	// Fill up the queues with some more random events.
+	// Fill up the queues with random events.
 	for user, _ := range s.game.UserSites {
 		for i := 0; i < MaxEventsPerRound; i++ {
 			event := GenerateEvent(s.game, user)
@@ -218,16 +213,64 @@ func (s *SiteVisitController) Begin() {
 		}
 	}
 
+	// The observed attack mechanism is handled here. All visitors at the
+	// watchtower will get the observed attack message (and if no user is
+	// there, the attacks will automatically proceed without defense).
+	for i := 0; i < MaxEventsPerRound; i++ {
+		event := GenerateObservedAttack(s.game, NewPlayer())
+		if event == nil {
+			continue
+		}
+
+		// We got an observed attack. If there are observers at the
+		// watchtower, let one of them defend.
+		possibleDefenders := []User{}
+		for user, site := range s.game.UserSites {
+			if site == Watchtower {
+				possibleDefenders = append(possibleDefenders, user)
+			}
+		}
+
+		// If there are no observers, add attacks to the users at that
+		// site.
+		if len(possibleDefenders) == 0 {
+			for user, site := range s.game.UserSites {
+				if site == event.site {
+					s.userEventQueue[user] = append(s.userEventQueue[user], NewAttack())
+				}
+			}
+		} else {
+			// There are defenders. Choose one defender and let them defend it.
+			defender := possibleDefenders[rand.Intn(len(possibleDefenders))]
+			s.userEventQueue[defender] = append(s.userEventQueue[defender], event)
+		}
+	}
+
+	// Shuffle all user event queues to make them seem more natural.
+	for user, _ := range s.game.UserSites {
+		ShuffleQueue(s.userEventQueue[user])
+	}
+
+	// Prepend the repair event to the user queue.
+	for user, _ := range s.game.UserSites {
+		s.userEventQueue[user] = append(
+			[]SiteEvent{NewRepairSite()},
+			s.userEventQueue[user]...,
+		)
+	}
+
 	// Try to give all the users their initial events.
 	for user, _ := range s.game.UserSites {
 		s.GiveNewEvent(user)
 	}
 }
 
-func (s *SiteVisitController) GiveNewEvent(u User) {
+// GiveNewEvent tries to give a user a new event from their queue. If there
+// aren't any events, it returns false.
+func (s *SiteVisitController) GiveNewEvent(u User) bool {
 	if len(s.userEventQueue[u]) == 0 {
 		fmt.Printf("No events for %q.", u.Name())
-		return
+		return false
 	}
 
 	// Pop the event out of the user's queue
@@ -255,6 +298,8 @@ func (s *SiteVisitController) GiveNewEvent(u User) {
 
 	// Send the message to the user.
 	u.Message(msg)
+
+	return true
 }
 
 // End is called when the state is no longer active.
@@ -280,15 +325,17 @@ func (s *SiteVisitController) HandleStatusPhase() {
 }
 
 func (s *SiteVisitController) HandleEventPhase() {
-	s.round += 1
-	if s.round == NumSiteVisitRounds {
-		s.game.ChangeState(SiteSelectionState)
-		return
+	// Send everyone a new event
+	noEventsLeft := true
+	for user, _ := range s.game.UserSites {
+		if s.GiveNewEvent(user) {
+			noEventsLeft = false
+		}
 	}
 
-	// Send everyone a new event
-	for user, _ := range s.game.UserSites {
-		s.GiveNewEvent(user)
+	if noEventsLeft {
+		s.game.ChangeState(SiteSelectionState)
+		return
 	}
 
 	// Set another timer.

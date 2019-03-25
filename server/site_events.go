@@ -180,11 +180,7 @@ func NewObserveAttack() ObserveAttack {
 }
 
 func (e ObserveAttack) Mods(g *Game, u User) int {
-	if g.UserSites[u] == Watchtower {
-		return 100
-	}
-
-	return 0
+	return 500
 }
 
 func (e ObserveAttack) Begin(g *Game, u User) EventMessage {
@@ -213,9 +209,18 @@ func (e ObserveAttack) End(g *Game, u User, r EventResponseMessage) *EventMessag
 	return &msg
 }
 
+func GenerateObservedAttack(g *Game, u User) *ObserveAttack {
+	event := NewObserveAttack()
+	choice := rand.Intn(1000)
+	if choice < event.Mods(g, u) {
+		return &event
+	}
+
+	return nil
+}
+
 func GenerateEvent(g *Game, u User) *SiteEvent {
 	allEvents := []SiteEvent{
-		NewObserveAttack(),
 		NewGetResource(),
 		NewAttack(),
 	}

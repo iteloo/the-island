@@ -27,6 +27,11 @@ func (p *Player) SetName(name string) {
 	p.name = name
 }
 
+func NewPlayer() User {
+	p := Player{}
+	return &p
+}
+
 // Message sends a player a message.
 func (p *Player) Message(message Message) error {
 	return p.Connection.WriteJSON(message)
