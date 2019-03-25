@@ -370,23 +370,37 @@ handleAction action model =
                 model
 
         Api.Event e ->
-            tryUpdate (game |> goIn siteVisit)
-                (\m ->
-                    { m
-                        | event =
-                            Just
-                                { messageId = e.messageId
-                                , title = e.title
-                                , description = e.description
-                                , okButton = e.okButton
-                                , spendButton = e.spendButton
-                                , actionButton = e.actionButton
-                                , resourceAmountSelected = 0
-                                }
-                    }
-                        ! []
-                )
-                model
+            -- [toclean] clean up into pipelines
+            model
+                |> tryUpdate game
+                    (\m ->
+                        { m
+                            | health =
+                                max 0 (m.health + toFloat e.healthModifier)
+                        }
+                            ! []
+                    )
+                |> (\( model2, cmd ) ->
+                        model2
+                            |> tryUpdate
+                                (game |> goIn siteVisit)
+                                (\m ->
+                                    { m
+                                        | event =
+                                            Just
+                                                { messageId = e.messageId
+                                                , title = e.title
+                                                , description = e.description
+                                                , okButton = e.okButton
+                                                , spendButton = e.spendButton
+                                                , actionButton = e.actionButton
+                                                , resourceAmountSelected = 0
+                                                , healthModifier = e.healthModifier
+                                                }
+                                    }
+                                        ! [ cmd ]
+                                )
+                   )
 
         Api.GameOver winner ->
             model ! []

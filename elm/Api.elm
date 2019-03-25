@@ -31,6 +31,7 @@ type alias EventMessage =
     , okButton : Maybe String
     , spendButton : Maybe Resource
     , actionButton : Maybe ActionButtonInfo
+    , healthModifier : Int
     }
 
 
@@ -100,6 +101,7 @@ actionHelp a =
                 |> D.custom okButton
                 |> D.custom spendButton
                 |> D.custom actionButton
+                |> D.optional "health_modifier" D.int 0
                 |> D.map Event
 
         "game_over" ->
