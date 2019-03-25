@@ -205,7 +205,15 @@ updateSiteSelection :
 updateSiteSelection { toGameServer } msg model =
     case msg of
         SiteSelected site ->
-            { model | siteSelected = Just site }
+            { model
+                | siteSelected =
+                    case model.siteSelected |> Maybe.map ((==) site) of
+                        Just True ->
+                            Nothing
+
+                        _ ->
+                            Just site
+            }
                 ! [ toGameServer <| Api.SiteSelected site ]
 
         ReadyButton ->

@@ -1,6 +1,6 @@
 body {
     font-family: -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-    font-size: 20px;
+    font-size: small;
     color: rgb(36, 41, 46);
     font-weight: 400;
     padding: 0;
@@ -61,7 +61,7 @@ body {
 }
 
 
-.view {
+.game-view {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: 50px auto 200px;
@@ -83,6 +83,44 @@ body {
 .game-title {
     flex-grow: 1;
     color: rgba(255, 255, 255, 0.9);
+}
+
+.site-buttons-container {
+  display: flex
+}
+
+.site-button {
+  display: flex;
+  align-items: center;
+  filter: brightness(70%);
+  width: 20%;
+  font-size: 3vw;
+  height: 20%;
+  text-align: center;
+}
+
+.site-button-selected {
+  filter: brightness(100%);
+}
+
+.forest-button {
+  background: palegreen;
+}
+
+.farm-button {
+  background: burlywood;
+}
+
+.hospital-button {
+  background: lightsalmon;
+}
+
+.watchtower-button {
+  background: lightgray;
+}
+
+.beach-button {
+  background: lightskyblue;
 }
 
 .link-icon {
@@ -329,6 +367,8 @@ input {
 }
 
 .active-state {
+    display: flex;
+    flex-direction: column;
     grid-column: 1 / 4;
     grid-row: 2;
     padding: 10px;
