@@ -15,6 +15,8 @@ module Model exposing
     , initSiteSelectionModel
     , initSiteVisitModel
     , initWaitModel
+    , maxAntihunger
+    , maxHealth
     )
 
 import Api
@@ -57,6 +59,8 @@ type alias GameModel =
     { gameName : String
     , playerName : String
     , stage : Stage
+    , health : Float
+    , antihunger : Float
     , inventory : Material Int
     , basket : Material Int
     , timer : Maybe Timer
@@ -121,11 +125,21 @@ initJoinGameModel =
     }
 
 
+maxHealth =
+    3
+
+
+maxAntihunger =
+    2
+
+
 initGameModel : String -> GameModel
 initGameModel name =
     { gameName = name
     , playerName = "Anonymous"
     , stage = WaitStage initWaitModel
+    , health = toFloat maxHealth
+    , antihunger = toFloat maxAntihunger
     , inventory = Material.empty
     , basket = Material.empty
     , timer = Nothing

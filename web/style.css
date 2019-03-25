@@ -86,10 +86,18 @@ body {
 }
 
 .link-icon {
-    width: 55px;
     text-align: left;
     margin-left: 10px;
     margin-right: 10px;
+}
+
+.img-icon {
+    width: 20px;
+    text-align: left;
+}
+
+.health-icon, .empty-health-icon {
+    text-align: left;
 }
 
 .timer {

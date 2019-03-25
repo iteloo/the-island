@@ -75,38 +75,79 @@ gameView model =
             ]
 
 
-icon : String -> String -> Html GameMsg
+icon : String -> String -> Html msg
 icon class_name icon_name =
     i [ class ("material-icons " ++ class_name) ] [ text icon_name ]
 
 
+imgIcon : String -> String -> Html msg
+imgIcon className imgName =
+    img
+        [ class ("img-icon " ++ className)
+        , src imgName
+        ]
+        []
+
+
 topBar : GameModel -> Html GameMsg
 topBar model =
-    div [ class "heading" ]
-        [ icon "link-icon" "link"
-        , div [ class "game-title" ] [ text model.gameName ]
-        , div [ class "timer" ]
-            (List.concat
-                [ case model.timer of
-                    Just timer ->
-                        [ div [ class "timer-text" ]
-                            [ text
-                                (toString
-                                    << round
-                                    << Time.inSeconds
-                                    << Timer.timeLeft
-                                 <|
-                                    timer
-                                )
-                            ]
-                        , icon "timer-icon" "timer"
-                        ]
+    div [ class "heading" ] <|
+        List.concat
+            [ [ icon "link-icon" "link" ]
+            , case model.stage of
+                -- [hack] not the cleanest
+                WaitStage _ ->
+                    []
 
-                    Nothing ->
-                        []
-                ]
-            )
+                _ ->
+                    [ status model ]
+            , [ div [ class "game-title" ] [ text model.gameName ] ]
+            , maybeView timerView model.timer
+            ]
+
+
+timerView timer =
+    div [ class "timer" ]
+        [ div [ class "timer-text" ]
+            [ text
+                (toString
+                    << round
+                    << Time.inSeconds
+                    << Timer.timeLeft
+                 <|
+                    timer
+                )
+            ]
+        , icon "timer-icon" "timer"
         ]
+
+
+status { health, antihunger } =
+    let
+        intBisect maxValue x =
+            let
+                ceilX =
+                    ceiling x
+            in
+            ( ceilX, maxValue - ceilX )
+
+        ( healthInt, emptyHealthInt ) =
+            intBisect maxHealth health
+
+        ( antihungerInt, emptyAntihungerInt ) =
+            intBisect maxAntihunger antihunger
+    in
+    div [ class "status" ] <|
+        List.concat
+            [ List.repeat healthInt <|
+                icon "health-icon" "favorite"
+            , List.repeat emptyHealthInt <|
+                icon "empty-health-icon" "favorite-border"
+            , List.repeat antihungerInt <|
+                imgIcon "antihunger-icon" "assets/carrot.png"
+            , List.repeat emptyAntihungerInt <|
+                imgIcon "empty-antihunger-icon" "assets/carrot-transparent.png"
+            ]
 
 
 inventoryView : Material Int -> Html GameMsg
@@ -327,3 +368,13 @@ gameOverView : Html GameMsg
 gameOverView =
     -- [todo] display winner, stats, etc
     div [] [ text "Game Over!" ]
+
+
+maybeView : (model -> Html msg) -> Maybe model -> List (Html msg)
+maybeView view mModel =
+    case mModel of
+        Nothing ->
+            []
+
+        Just model ->
+            [ view model ]
