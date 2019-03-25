@@ -166,8 +166,56 @@ func (e Attack) End(g *Game, u User, r EventResponseMessage) *EventMessage {
 	return &msg
 }
 
+type ObserveAttack struct {
+	site Site
+}
+
+func NewObserveAttack() ObserveAttack {
+	sites := []Site{Forest, Farm, Hospital}
+	choice := rand.Intn(len(sites))
+
+	return ObserveAttack{
+		site: sites[choice],
+	}
+}
+
+func (e ObserveAttack) Mods(g *Game, u User) int {
+	if g.UserSites[u] == Watchtower {
+		return 100
+	}
+
+	return 0
+}
+
+func (e ObserveAttack) Begin(g *Game, u User) EventMessage {
+	title := "Animals on the move!"
+	description := fmt.Sprintf("Angry animals are moving toward the %s. You can shoot them, if you have bullets.", e.site)
+	msg := NewEventMessage(title, description)
+	msg.WithSpendButton(Bullet)
+	msg.HasSubsequentStatusUpdate = true
+
+	return msg
+}
+
+func (e ObserveAttack) End(g *Game, u User, r EventResponseMessage) *EventMessage {
+	if r.ResourceAmount > 0 {
+		msg := NewEventMessage("You shot the animals!", "They ran away scared.")
+		return &msg
+	}
+
+	// Send a defense failed message to the game.
+	g.RecieveMessage(u, NewDefenseFailedMessage(e.site))
+
+	title := fmt.Sprintf("The animals go straight for the %s!", e.site)
+	description := "They look really angry!"
+	msg := NewEventMessage(title, description)
+
+	return &msg
+}
+
 func GenerateEvent(g *Game, u User) *SiteEvent {
 	allEvents := []SiteEvent{
+		NewObserveAttack(),
 		NewGetResource(),
 		NewAttack(),
 	}

@@ -324,7 +324,16 @@ func (s *SiteVisitController) RecieveMessage(u User, m Message) {
 				u.Message(response)
 			}
 		}
-
+		break
+	case DefenseFailedMessage:
+		// The watchtower failed to defend an attack. So it will propagate
+		// to the recipients of the attack.
+		for user, site := range s.game.UserSites {
+			if site == msg.Site {
+				// Prepend the attack so they definitely get it next round
+				s.userEventQueue[user] = append([]SiteEvent{NewAttack()}, s.userEventQueue[user]...)
+			}
+		}
 	default:
 		return
 	}

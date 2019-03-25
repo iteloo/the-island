@@ -32,7 +32,8 @@ const (
 	EventResponseAction MessageAction = "event_response"
 
 	// Special debug-only actions
-	TickAction MessageAction = "tick"
+	TickAction          MessageAction = "tick"
+	DefenseFailedAction MessageAction = "defense_failed"
 )
 
 // A Message is an object which must contain an Action string, serializable
@@ -274,6 +275,19 @@ func NewSiteSelectionMessage(site Site) SiteSelectionMessage {
 	return SiteSelectionMessage{
 		Action:       string(SiteSelectionAction),
 		SiteSelected: site,
+	}
+}
+
+// Internal-only messages
+type DefenseFailedMessage struct {
+	Action string `json:"action"`
+	Site   Site   `json:"site"`
+}
+
+func NewDefenseFailedMessage(site Site) Message {
+	return DefenseFailedMessage{
+		Action: string(DefenseFailedAction),
+		Site:   site,
 	}
 }
 
