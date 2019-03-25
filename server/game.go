@@ -134,7 +134,9 @@ func (g *Game) RecieveMessage(user User, message Message) {
 	case TradeMessage:
 		isntSelfTrade := g.stagedUser != user
 		withinTimeInterval := g.GetTime()-g.stagingTime < TradeTimeout
+		log.Println("Trade proposed")
 		if isntSelfTrade && g.stagedUser != nil && withinTimeInterval {
+		log.Println("Trade accepted")
 			// Execute the currently proposed trade.
 			g.stagedUser.Message(NewTradeCompletedMessage(msg.Materials))
 			user.Message(NewTradeCompletedMessage(g.stagedMaterials))
