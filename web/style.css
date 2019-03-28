@@ -34,47 +34,18 @@ body {
     opacity: 0.3;
 }
 
-.popover {
-    z-index: 10;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-left: auto;
-    margin-right: auto;
-    display: block;
-    padding: 20px;
-    border-radius: 5px;
-    display: flex;
-    border: 1px solid #888888;
-    background-color: #EEEEEE;
-    width: 80%;
-    height: auto;
-    transform: translate(-50%, -50%);
-    flex-direction: column;
-}
-
-.card-activation-tray {
-    align-items: center;
-    flex-direction: row;
-    display: flex;
-    margin-right: -10px;
-}
-
-
 .game-view {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: 50px auto 200px;
-    grid-gap: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     height: 100%;
 }
 
-.heading {
+.topbar {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     color: white;
-    grid-column: 1 / 4;
-    grid-row: 1;
     width: 100%;
     text-align: center;
     background-color: #24292e;
@@ -174,107 +145,6 @@ input {
     margin-bottom: 10px;
 }
 
-.player-statuses {
-    display: flex;
-    flex-direction: column;
-    width: 300px;
-    margin-top: 10px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.ready-icon {
-    width: 50px;
-    text-align: center;
-    margin-left: 20px;
-    border-radius: 3px;
-    color: white;
-    width: 36px;
-}
-
-.card {
-    width: auto;
-    background-color: white;
-    height: 265px;
-    border: 1px solid grey;
-    border-radius: 5px;
-    margin-top: 10px;
-    margin-bottom: 20px;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 20px;
-    padding-right: 20px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    box-shadow: 1px 1px 5px grey;
-}
-
-.card-heading {
-    display: flex;
-}
-
-.card-title {
-    flex-grow: 1;
-    font-weight: bold;
-}
-
-.card-text {
-    margin-top: 50px;
-}
-
-.card-micro {
-    font-size: 10pt;
-    width: 65px;
-    height: 90px;
-    padding-left: 5px;
-    padding-right: 5px;
-    padding-top: 10px;
-    margin-left: auto;
-    margin-right: auto;
-    border-radius: 5px;
-    background-color: white;
-    box-shadow: 1px 1px 1px #555555;
-}
-
-.card-shelf {
-    height: 125px;
-    align-items: center;
-    display: flex;
-}
-
-.card-micro.card-placeholder {
-    background-color: transparent;
-    border: 0.15em dashed #444444;
-    box-shadow: none;
-}
-
-.auction-control {
-    display: flex;
-}
-
-.auction-status {
-    flex-grow: 1;
-}
-
-.auction-winner {
-    margin-left: 10px;
-}
-
-.ready-icon.ready {
-    jackground-color: rgb(52, 208, 88);
-    background-image: linear-gradient(-180deg, rgb(52, 208, 88) 0%, rgb(40, 167, 69) 90%);
-}
-
-.ready-icon.waiting {
-    background-color: #E8D264/* #FFE66D; */
-}
-
-.player-status {
-    display: flex;
-    margin-bottom: 5px;
-    align-items: center;
-}
-
 .box-text {
     text-align: left;
     margin-left: 10px;
@@ -302,72 +172,42 @@ input {
     color: #CCCCCC;
 }
 
-.inventory {
+.player-statuses {
     display: flex;
-    background-color: #CCCCCC;
-    padding-left: 20px;
-    padding-right: 20px;
-    padding-top: 10px;
-    padding-bottom: 10px;
+    flex-direction: column;
+    width: 300px;
+    margin-top: 10px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.inventory-item {
-    flex-grow: 1;
+.ready-icon {
+    width: 50px;
     text-align: center;
-    background-color: #CCCCCC;
-    color: rgb(36, 41, 46);
+    margin-left: 20px;
+    border-radius: 3px;
+    color: white;
+    width: 36px;
 }
 
-.Blueberry::after {
-    content: "";
-    background-color: #2274A5;
-    border-radius: 20px;
-    height: 20px;
-    width: 20px;
-    display: inline-block;
-    margin-left: 7px;
-    position: relative;
-    top: 2px;
+.ready-icon.ready {
+    jackground-color: rgb(52, 208, 88);
+    background-image: linear-gradient(-180deg, rgb(52, 208, 88) 0%, rgb(40, 167, 69) 90%);
 }
 
-.Tomato::after {
-    content: "";
-    background-color: #DD7373;
-    border-radius: 20px;
-    height: 20px;
-    width: 20px;
-    display: inline-block;
-    margin-left: 7px;
-    position: relative;
-    top: 2px;
+.ready-icon.waiting {
+    background-color: #E8D264/* #FFE66D; */
 }
 
-.Corn::after {
-    content: "";
-    background-color: #FED766;
-    border-radius: 20px;
-    height: 20px;
-    width: 20px;
-    display: inline-block;
-    margin-left: 7px;
-    position: relative;
-    top: 2px;
-}
-
-.Purple::after {
-    content: "";
-    background-color: #63474D;
-    border-radius: 20px;
-    height: 20px;
-    width: 20px;
-    display: inline-block;
-    margin-left: 7px;
-    position: relative;
-    top: 2px;
+.player-status {
+    display: flex;
+    margin-bottom: 5px;
+    align-items: center;
 }
 
 .active-state {
     display: flex;
+    flex-grow: 1;
     flex-direction: column;
     grid-column: 1 / 4;
     grid-row: 2;
@@ -375,11 +215,10 @@ input {
 }
 
 .tray {
-    grid-column: 1/4;
-    grid-row: 3;
     display: flex;
+    flex-shrink: 0;
     flex-direction: column;
-    background-color: grey;
+    background-color: lightgrey;
     padding: 10px;
     margin-left: 10px;
     margin-right: 10px;

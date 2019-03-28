@@ -68,9 +68,7 @@ gameView model =
                     ]
               ]
             , [ div [ class "tray" ]
-                    [ basketView model
-                    , inventoryView model.inventory
-                    ]
+                    [ basketView model ]
               ]
             ]
 
@@ -91,7 +89,7 @@ imgIcon className imgName =
 
 topBar : GameModel -> Html GameMsg
 topBar model =
-    div [ class "heading" ] <|
+    div [ class "topbar" ] <|
         List.concat
             [ [ icon "link-icon" "link" ]
             , case model.stage of
@@ -102,7 +100,7 @@ topBar model =
                 _ ->
                     [ status model ]
             , [ div [ class "game-title" ] [ text model.gameName ] ]
-            , maybeView timerView model.timer
+            , maybeA timerView model.timer
             ]
 
 
@@ -128,6 +126,8 @@ status { health, antihunger } =
             let
                 ceilX =
                     ceiling x
+                        |> Basics.min maxValue
+                        |> Basics.max 0
             in
             ( ceilX, maxValue - ceilX )
 
@@ -142,26 +142,12 @@ status { health, antihunger } =
             [ List.repeat healthInt <|
                 icon "health-icon" "favorite"
             , List.repeat emptyHealthInt <|
-                icon "empty-health-icon" "favorite-border"
+                icon "empty-health-icon" "favorite_border"
             , List.repeat antihungerInt <|
                 imgIcon "antihunger-icon" "assets/carrot.png"
             , List.repeat emptyAntihungerInt <|
                 imgIcon "empty-antihunger-icon" "assets/carrot-transparent.png"
             ]
-
-
-inventoryView : Material Int -> Html GameMsg
-inventoryView inv =
-    div [ class "inventory" ]
-        (Material.values
-            (Material.map
-                (\resource count ->
-                    div [ class ("inventory-item " ++ toString resource) ]
-                        [ text (toString count) ]
-                )
-                inv
-            )
-        )
 
 
 basketView : GameModel -> Html GameMsg
@@ -178,6 +164,44 @@ basketView { inventory, basket } =
 
         cell =
             setDisplayStyle "table-cell"
+
+        resourceIconFiles : Material String
+        resourceIconFiles =
+            { log = "log.png"
+            , food = "carrot.png"
+            , bandage = "bandage.png"
+            , bullet = "bullet.png"
+            }
+                |> Material.map (\_ -> (++) "assets/")
+
+        resourceView modifier resourceCounts =
+            Material.values <|
+                Material.map2
+                    (\rsr count iconFile ->
+                        let
+                            canMove =
+                                Helper.move rsr
+                                    modifier
+                                    inventory
+                                    basket
+                                    /= Nothing
+                        in
+                        span
+                            (List.concat
+                                [ if canMove then
+                                    [ onClick (MoveToBasket rsr modifier) ]
+
+                                  else
+                                    []
+                                ]
+                            )
+                            [ imgIcon (Material.shorthand rsr)
+                                iconFile
+                            , text <| toString count
+                            ]
+                    )
+                    resourceCounts
+                    resourceIconFiles
     in
     table [] <|
         List.concat
@@ -185,72 +209,16 @@ basketView { inventory, basket } =
                     List.map (cell [] << List.singleton) <|
                         List.concat
                             [ [ text "Basket:" ]
-                            , List.map
-                                (text
-                                    << toString
-                                    << flip Material.lookup basket
-                                )
-                                Material.allResources
+                            , resourceView -1 basket
                             , [ button [ onClick EmptyBasket ]
                                     [ text "Empty" ]
                               ]
                             ]
-              , row
-                    []
-                <|
+              , row [] <|
                     List.map (cell [] << List.singleton) <|
                         List.concat
-                            [ [ text "" ]
-                            , List.map
-                                (\rsr ->
-                                    button
-                                        [ onClick (MoveToBasket rsr 1)
-                                        , disabled
-                                            (Nothing
-                                                == Helper.move rsr
-                                                    1
-                                                    inventory
-                                                    basket
-                                            )
-                                        ]
-                                        [ text "^" ]
-                                )
-                                Material.allResources
-                            ]
-              , row
-                    []
-                <|
-                    List.map (cell [] << List.singleton) <|
-                        List.concat
-                            [ [ text "" ]
-                            , List.map
-                                (\rsr ->
-                                    button
-                                        [ onClick (MoveToBasket rsr -1)
-                                        , disabled
-                                            (Nothing
-                                                == Helper.move rsr
-                                                    -1
-                                                    inventory
-                                                    basket
-                                            )
-                                        ]
-                                        [ text "v" ]
-                                )
-                                Material.allResources
-                            ]
-              , row
-                    []
-                <|
-                    List.map (cell [] << List.singleton) <|
-                        List.concat
-                            [ [ text "Inv:" ]
-                            , List.map
-                                (text
-                                    << toString
-                                    << flip Material.lookup inventory
-                                )
-                                Material.allResources
+                            [ [ text "Bag:" ]
+                            , resourceView 1 inventory
                             ]
               ]
             ]
@@ -393,11 +361,11 @@ gameOverView =
     div [] [ text "Game Over!" ]
 
 
-maybeView : (model -> Html msg) -> Maybe model -> List (Html msg)
-maybeView view mModel =
-    case mModel of
+maybeA : (b -> a) -> Maybe b -> List a
+maybeA f mb =
+    case mb of
         Nothing ->
             []
 
-        Just model ->
-            [ view model ]
+        Just b ->
+            [ f b ]
