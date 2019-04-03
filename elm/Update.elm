@@ -101,8 +101,7 @@ updateApp ctx msg model =
         ServerMsgReceived action ->
             case action of
                 Ok action ->
-                    model
-                        |> handleAction action
+                    model |> handleAction action
 
                 Err e ->
                     Debug.crash <| "Error in ServerMsgReceived: " ++ e
@@ -133,6 +132,9 @@ updateGame { toServer, toMsg } msg model =
     let
         toGameServer =
             toServer model.gameName
+
+        trade model =
+            model ! [ toGameServer (Api.Trade model.basket) ]
     in
     case msg of
         WaitMsg msg ->
@@ -195,7 +197,10 @@ updateGame { toServer, toMsg } msg model =
                 ! []
 
         Shake ->
-            model ! [ toGameServer (Api.Trade model.basket) ]
+            trade model
+
+        TradeButton ->
+            trade model
 
 
 updateSiteSelection :

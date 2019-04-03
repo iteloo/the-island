@@ -212,6 +212,8 @@ basketView { inventory, basket } =
                             , resourceView -1 basket
                             , [ button [ onClick EmptyBasket ]
                                     [ text "Empty" ]
+                              , button [ onClick TradeButton ]
+                                    [ text "Trade" ]
                               ]
                             ]
               , row [] <|
