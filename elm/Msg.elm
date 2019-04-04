@@ -43,6 +43,7 @@ type GameMsg
     | MoveToBasket Resource Int
     | EmptyBasket
     | Shake
+    | TradeButton
 
 
 type SiteSelectionMsg

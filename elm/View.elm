@@ -146,7 +146,7 @@ status { health, antihunger } =
             , List.repeat antihungerInt <|
                 imgIcon "antihunger-icon" "assets/carrot.png"
             , List.repeat emptyAntihungerInt <|
-                imgIcon "empty-antihunger-icon" "assets/carrot-transparent.png"
+                imgIcon "empty-antihunger-icon" "assets/carrot_transparent.png"
             ]
 
 
@@ -212,6 +212,8 @@ basketView { inventory, basket } =
                             , resourceView -1 basket
                             , [ button [ onClick EmptyBasket ]
                                     [ text "Empty" ]
+                              , button [ onClick TradeButton ]
+                                    [ text "Trade" ]
                               ]
                             ]
               , row [] <|

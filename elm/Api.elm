@@ -89,8 +89,19 @@ actionHelp a =
                 )
 
         "trade_completed" ->
+            -- [note] material field is whatever str we passed in to `trade` msg
             D.map TradeCompleted <|
-                D.field "materials" (material D.int)
+                (D.field "materials" D.string
+                    |> D.andThen
+                        (\materialStr ->
+                            case D.decodeString (material D.int) materialStr of
+                                Ok resourcesObtained ->
+                                    D.succeed resourcesObtained
+
+                                Err e ->
+                                    D.fail e
+                        )
+                )
 
         "event" ->
             -- [todo] add better logic
@@ -225,7 +236,9 @@ encodeServerAction a =
                 Trade mat ->
                     ( "trade"
                     , [ ( "materials"
-                        , E.string
+                        , -- [note] in `trade_completed`, we'll get back
+                          -- string we pass in here
+                          E.string
                             (E.encode 0 (encodeMaterial E.int mat))
                         )
                       ]
