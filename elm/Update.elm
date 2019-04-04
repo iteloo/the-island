@@ -348,6 +348,30 @@ updateSiteVisit { toGameServer } msg ( siteVisitModel, gameModel ) =
                                   ]
 
 
+updateAntihunger : Float -> Upd GameModel
+updateAntihunger diff model =
+    -- [note] should this be in sync with UI? Careful with rounding error
+    { model | antihunger = max 0 (model.antihunger + diff) } ! []
+
+
+updateHealth : Float -> Upd GameModel
+updateHealth diff model =
+    -- [note] should this be in sync with UI? Careful with rounding error
+    { model | health = max 0 (model.health + diff) } ! []
+
+
+updateHealthWithAntihunger : Upd GameModel
+updateHealthWithAntihunger model =
+    if model.antihunger == 0 then
+        { model
+            | antihunger = maxAntihunger
+        }
+            |> updateHealth -1
+
+    else
+        model ! []
+
+
 handleAction : Api.Action -> Upd AppModel
 handleAction action model =
     case action of
@@ -425,15 +449,19 @@ changeStage stagetype model =
         oldStage =
             model.stage
 
-        ( newStage, cmd ) =
+        ( newStage, ( newModel, cmd ) ) =
             case ( oldStage, stagetype ) of
                 ( _, SiteSelectionStageType ) ->
-                    SiteSelectionStage initSiteSelectionModel ! []
+                    ( SiteSelectionStage initSiteSelectionModel
+                    , updateAntihunger -1 model
+                    )
 
                 ( SiteSelectionStage old, SiteVisitStageType ) ->
                     case old.siteSelected of
                         Just site ->
-                            SiteVisitStage (initSiteVisitModel site) ! []
+                            ( SiteVisitStage (initSiteVisitModel site)
+                            , updateHealthWithAntihunger model
+                            )
 
                         Nothing ->
                             Debug.crash "No site selected before transition"
@@ -446,12 +474,11 @@ changeStage stagetype model =
                             ++ toString stagetype
                         )
     in
-    ( { model
+    { newModel
         | stage = newStage
         , timer = Nothing
-      }
-    , cmd
-    )
+    }
+        ! [ cmd ]
 
 
 
