@@ -51,8 +51,13 @@ gameView : GameModel -> Html GameMsg
 gameView model =
     div [ class "game-view" ] <|
         List.concat
-            [ [ topBar model
-              , div [ class "active-state" ]
+            [ [ topBar model ]
+            , -- [note] rounding error?
+              if model.health == 0 then
+                [ deathView ]
+
+              else
+                [ div [ class "active-state" ]
                     [ case model.stage of
                         WaitStage m ->
                             Html.map WaitMsg (waitView m)
@@ -66,11 +71,14 @@ gameView model =
                         GameOverStage ->
                             gameOverView
                     ]
-              ]
-            , [ div [ class "tray" ]
-                    [ basketView model ]
-              ]
+                , div [ class "tray" ] [ basketView model ]
+                ]
             ]
+
+
+deathView : Html msg
+deathView =
+    div [] [ text "You died!" ]
 
 
 icon : String -> String -> Html msg
