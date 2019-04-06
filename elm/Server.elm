@@ -1,8 +1,8 @@
-module Server exposing (..)
+module Server exposing (SendToServer, listen, send, wsURL)
 
-import WebSocket
-import Msg exposing (..)
 import Api exposing (..)
+import Msg exposing (..)
+import WebSocket
 
 
 type alias SendToServer =
