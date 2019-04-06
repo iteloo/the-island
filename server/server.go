@@ -39,6 +39,10 @@ func NewPlayer() User {
 
 // Message sends a player a message.
 func (p *Player) Message(message Message) error {
+	if !p.alive && message.requiresAlive() {
+		log.Printf("Not sending message to unalive Player[name=%v]: %v", p.Name(), message)
+		return nil
+	}
 	log.Printf("Sending message to Player[name=%v]: %v", p.Name(), message)
 	return p.Connection.WriteJSON(message)
 }

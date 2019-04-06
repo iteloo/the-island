@@ -39,7 +39,9 @@ const (
 
 // A Message is an object which must contain an Action string, serializable
 // to the MessageAction, and may also contain other JSON serializable fields.
-type Message interface{}
+type Message interface {
+	requiresAlive() bool
+}
 
 // BasicMessage is a dummy message. All JSON messages sent or recieved by the
 // server should be deserializable into this message type. This allows us to
@@ -48,6 +50,8 @@ type Message interface{}
 type BasicMessage struct {
 	Action string `json:"action"`
 }
+
+func (m BasicMessage) requiresAlive() bool { return false }
 
 // TickMessage is sent to increment the current game clock. Users shouldn't send
 // this message, it is only generated internally.
@@ -63,6 +67,8 @@ func NewTickMessage(tick time.Duration) TickMessage {
 	}
 }
 
+func (m TickMessage) requiresAlive() bool { return false }
+
 // Messages broadcast by the server.
 
 type GameStateChangedMessage struct {
@@ -77,6 +83,8 @@ func NewGameStateChangedMessage(newState GameState) Message {
 	}
 }
 
+func (m GameStateChangedMessage) requiresAlive() bool { return true }
+
 type SetClockMessage struct {
 	Action string `json:"action"`
 	Time   int    `json:"time"`
@@ -88,6 +96,8 @@ func NewSetClockMessage(t time.Duration) Message {
 		Time:   int(t / time.Millisecond),
 	}
 }
+
+func (m SetClockMessage) requiresAlive() bool { return false }
 
 type PlayerInfo struct {
 	Name  string `json:"name"`
@@ -105,6 +115,8 @@ func NewPlayerInfoUpdateMessage(info []PlayerInfo) Message {
 		Info:   info,
 	}
 }
+
+func (m PlayerInfoUpdateMessage) requiresAlive() bool { return false }
 
 type EventMessage struct {
 	Action       string `json:"action"`
@@ -143,6 +155,8 @@ func NewEventMessage(title, description string) EventMessage {
 	}
 }
 
+func (m EventMessage) requiresAlive() bool { return true }
+
 func (m *EventMessage) WithOKButton(text string) *EventMessage {
 	m.HasOK = true
 	m.OKButtonText = text
@@ -177,6 +191,8 @@ func NewTradeCompletedMessage(materials string) Message {
 	return TradeCompletedMessage{string(TradeCompletedAction), materials}
 }
 
+func (m TradeCompletedMessage) requiresAlive() bool { return true }
+
 type WelcomeMessage struct {
 	Action string `json:"action"`
 	Game   string `json:"game"`
@@ -190,6 +206,8 @@ func NewWelcomeMessage(game, state string) Message {
 		State:  state,
 	}
 }
+
+func (m WelcomeMessage) requiresAlive() bool { return false }
 
 // Client messages
 
@@ -209,6 +227,8 @@ func NewEventResponseMessage(id uint64, clicked_ok bool, clicked_action bool, am
 	}
 }
 
+func (m EventResponseMessage) requiresAlive() bool { return false }
+
 type ReadyMessage struct {
 	Action string `json:"action"`
 	Ready  bool   `json:"ready"`
@@ -221,6 +241,8 @@ func NewReadyMessage(ready bool) Message {
 	}
 }
 
+func (m ReadyMessage) requiresAlive() bool { return false }
+
 type JoinMessage struct {
 	Action string `json:"action"`
 }
@@ -228,6 +250,8 @@ type JoinMessage struct {
 func NewJoinMessage() Message {
 	return JoinMessage{string(JoinAction)}
 }
+
+func (m JoinMessage) requiresAlive() bool { return false }
 
 type LeaveMessage struct {
 	Action string `json:"action"`
@@ -237,6 +261,8 @@ func NewLeaveMessage() Message {
 	return LeaveMessage{string(LeaveAction)}
 }
 
+func (m LeaveMessage) requiresAlive() bool { return false }
+
 type DeathMessage struct {
 	Action string `json:"action"`
 }
@@ -244,6 +270,8 @@ type DeathMessage struct {
 func NewDeathMessage() Message {
 	return DeathMessage{string(DeathAction)}
 }
+
+func (m DeathMessage) requiresAlive() bool { return true }
 
 type TradeMessage struct {
 	Action    string `json:"action"`
@@ -256,6 +284,8 @@ func NewTradeMessage(materials string) Message {
 		Materials: materials,
 	}
 }
+
+func (m TradeMessage) requiresAlive() bool { return true }
 
 type SellMessage struct {
 	Action   string `json:"action"`
@@ -275,6 +305,8 @@ func NewSetNameMessage(name string) SetNameMessage {
 	}
 }
 
+func (m SetNameMessage) requiresAlive() bool { return false }
+
 type SiteSelectionMessage struct {
 	Action       string `json:"action"`
 	SiteSelected Site   `json:"site"`
@@ -286,6 +318,8 @@ func NewSiteSelectionMessage(site Site) SiteSelectionMessage {
 		SiteSelected: site,
 	}
 }
+
+func (m SiteSelectionMessage) requiresAlive() bool { return false }
 
 // Internal-only messages
 type DefenseFailedMessage struct {
@@ -299,6 +333,8 @@ func NewDefenseFailedMessage(site Site) Message {
 		Site:   site,
 	}
 }
+
+func (m DefenseFailedMessage) requiresAlive() bool { return true }
 
 // DecodeMessage takes data in bytes, determines which message it corresponds
 // to, and decodes it to the appropriate type.
