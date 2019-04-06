@@ -48,6 +48,7 @@ func join(w http.ResponseWriter, r *http.Request) {
 	player := Player{
 		name:       name,
 		Connection: conn,
+		alive:      true,
 	}
 
 	game, ok := AllGames[target]
