@@ -17,6 +17,7 @@ const (
 type Player struct {
 	name       string
 	Connection *websocket.Conn
+	alive      bool
 }
 
 func (p *Player) Name() string {
@@ -27,6 +28,10 @@ func (p *Player) SetName(name string) {
 	p.name = name
 }
 
+func (p *Player) SetAlive(alive bool) {
+	p.alive = alive
+}
+
 func NewPlayer() User {
 	p := Player{}
 	return &p
@@ -34,7 +39,7 @@ func NewPlayer() User {
 
 // Message sends a player a message.
 func (p *Player) Message(message Message) error {
-	log.Printf("Sending message to Player[name=%v]: %v", p.Name(), message )
+	log.Printf("Sending message to Player[name=%v]: %v", p.Name(), message)
 	return p.Connection.WriteJSON(message)
 }
 
