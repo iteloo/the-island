@@ -26,6 +26,7 @@ const (
 	ReadyAction         MessageAction = "ready"
 	JoinAction          MessageAction = "join_game"
 	LeaveAction         MessageAction = "leave"
+	DeathAction         MessageAction = "death"
 	TradeAction         MessageAction = "trade"
 	SetNameAction       MessageAction = "set_name"
 	SiteSelectionAction MessageAction = "site_selected"
@@ -236,6 +237,14 @@ func NewLeaveMessage() Message {
 	return LeaveMessage{string(LeaveAction)}
 }
 
+type DeathMessage struct {
+	Action string `json:"action"`
+}
+
+func NewDeathMessage() Message {
+	return DeathMessage{string(DeathAction)}
+}
+
 type TradeMessage struct {
 	Action    string `json:"action"`
 	Materials string `json:"materials"`
@@ -326,6 +335,10 @@ func DecodeMessage(data []byte) (Message, error) {
 		message = m
 	case string(LeaveAction):
 		m := LeaveMessage{}
+		err = json.Unmarshal(data, &m)
+		message = m
+	case string(DeathAction):
+		m := DeathMessage{}
 		err = json.Unmarshal(data, &m)
 		message = m
 	case string(TradeAction):

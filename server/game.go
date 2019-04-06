@@ -44,6 +44,7 @@ type User interface {
 	Message(message Message) error
 	Name() string
 	SetName(name string)
+	SetAlive(alive bool)
 }
 
 // GameConnection holds a list of all the active players, and can be
@@ -130,13 +131,14 @@ func (g *Game) RecieveMessage(user User, message Message) {
 		delete(g.UserSites, user)
 	case SetNameMessage:
 		user.SetName(msg.Name)
-
+	case DeathMessage:
+		user.SetAlive(false)
 	case TradeMessage:
 		isntSelfTrade := g.stagedUser != user
 		withinTimeInterval := g.GetTime()-g.stagingTime < TradeTimeout
 		log.Println("Trade proposed")
 		if isntSelfTrade && g.stagedUser != nil && withinTimeInterval {
-		log.Println("Trade accepted")
+			log.Println("Trade accepted")
 			// Execute the currently proposed trade.
 			g.stagedUser.Message(NewTradeCompletedMessage(msg.Materials))
 			user.Message(NewTradeCompletedMessage(g.stagedMaterials))
