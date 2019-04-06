@@ -195,6 +195,7 @@ type ServerAction
     = JoinGame String
     | Ready Bool
     | SetName String
+    | Death
     | Trade (Material Int)
     | SiteSelected Site
     | EventResponse EventResponseMessage
@@ -232,6 +233,11 @@ encodeServerAction a =
 
                 SetName name ->
                     ( "set_name", [ ( "name", E.string name ) ] )
+
+                Death ->
+                    ( "death"
+                    , []
+                    )
 
                 Trade mat ->
                     ( "trade"

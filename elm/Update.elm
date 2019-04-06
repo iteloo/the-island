@@ -101,7 +101,7 @@ updateApp ctx msg model =
         ServerMsgReceived action ->
             case action of
                 Ok action ->
-                    model |> handleAction action
+                    model |> handleAction action ctx
 
                 Err e ->
                     Debug.crash <| "Error in ServerMsgReceived: " ++ e
@@ -127,11 +127,25 @@ updateWelcome { toServer } msg model =
             { model | gameNameInput = str } ! []
 
 
+mkGameCtx :
+    Ctx outermsg
+    -> { a | gameName : String }
+    -> (innermsg -> outermsg)
+    -> GameCtx innermsg
+mkGameCtx { toServer, toMsg } { gameName } msgWrap =
+    { toGameServer = toServer gameName
+    , toMsg = toMsg << msgWrap
+    }
+
+
 updateGame : Ctx GameMsg -> GameMsg -> Upd GameModel
-updateGame { toServer, toMsg } msg model =
+updateGame ctx msg model =
     let
+        gameCtx =
+            mkGameCtx ctx model
+
         toGameServer =
-            toServer model.gameName
+            (gameCtx identity).toGameServer
 
         trade model =
             model ! [ toGameServer (Api.Trade model.basket) ]
@@ -150,9 +164,7 @@ updateGame { toServer, toMsg } msg model =
         SiteSelectionMsg msg ->
             tryUpdate siteSelection
                 (updateSiteSelection
-                    { toGameServer = toGameServer
-                    , toMsg = toMsg << SiteSelectionMsg
-                    }
+                    (gameCtx SiteSelectionMsg)
                     msg
                 )
                 model
@@ -160,9 +172,7 @@ updateGame { toServer, toMsg } msg model =
         SiteVisitMsg msg ->
             tryUpdateGlobal siteVisit
                 (updateSiteVisit
-                    { toGameServer = toGameServer
-                    , toMsg = toMsg << SiteVisitMsg
-                    }
+                    (gameCtx SiteVisitMsg)
                     msg
                 )
                 model
@@ -348,38 +358,18 @@ updateSiteVisit { toGameServer } msg ( siteVisitModel, gameModel ) =
                                   ]
 
 
-updateAntihunger : Float -> Upd GameModel
-updateAntihunger diff model =
-    -- [note] should this be in sync with UI? Careful with rounding error
-    { model | antihunger = max 0 (model.antihunger + diff) } ! []
-
-
-updateHealth : Float -> Upd GameModel
-updateHealth diff model =
-    -- [note] should this be in sync with UI? Careful with rounding error
-    { model | health = max 0 (model.health + diff) } ! []
-
-
-updateHealthWithAntihunger : Upd GameModel
-updateHealthWithAntihunger model =
-    if model.antihunger == 0 then
-        { model
-            | antihunger = maxAntihunger
-        }
-            |> updateHealth -1
-
-    else
-        model ! []
-
-
-handleAction : Api.Action -> Upd AppModel
-handleAction action model =
+handleAction : Api.Action -> Ctx AppMsg -> Upd AppModel
+handleAction action ctx model =
     case action of
         Api.Welcome name ->
             GameScreen (initGameModel name) ! []
 
         Api.GameStateChanged stage ->
-            tryUpdate game (changeStage stage) model
+            tryUpdate game
+                (\m ->
+                    changeStage stage (mkGameCtx ctx m GameMsg) m
+                )
+                model
 
         Api.SetClock ms ->
             tryUpdate game
@@ -443,8 +433,42 @@ handleAction action model =
             model ! []
 
 
-changeStage : StageType -> Upd GameModel
-changeStage stagetype model =
+updateAntihunger : Float -> Upd GameModel
+updateAntihunger diff model =
+    -- [note] should this be in sync with UI? Careful with rounding error
+    { model | antihunger = max 0 (model.antihunger + diff) } ! []
+
+
+updateHealth : Float -> GameCtx msg -> Upd GameModel
+updateHealth diff { toGameServer } model =
+    -- [note] should this be in sync with UI? Careful with rounding error
+    let
+        newHealth =
+            max 0 (model.health + diff)
+    in
+    { model | health = newHealth }
+        ! (if newHealth == 0 then
+            [ toGameServer Api.Death ]
+
+           else
+            []
+          )
+
+
+updateHealthWithAntihunger : GameCtx msg -> Upd GameModel
+updateHealthWithAntihunger ctx model =
+    if model.antihunger == 0 then
+        { model
+            | antihunger = maxAntihunger
+        }
+            |> updateHealth -1 ctx
+
+    else
+        model ! []
+
+
+changeStage : StageType -> GameCtx msg -> Upd GameModel
+changeStage stagetype ctx model =
     let
         oldStage =
             model.stage
@@ -460,7 +484,7 @@ changeStage stagetype model =
                     case old.siteSelected of
                         Just site ->
                             ( SiteVisitStage (initSiteVisitModel site)
-                            , updateHealthWithAntihunger model
+                            , updateHealthWithAntihunger ctx model
                             )
 
                         Nothing ->
