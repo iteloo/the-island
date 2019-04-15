@@ -401,11 +401,9 @@ handleAction action ctx model =
             model
                 |> tryUpdate game
                     (\m ->
-                        { m
-                            | health =
-                                max 0 (m.health + toFloat e.healthModifier)
-                        }
-                            ! []
+                        updateHealth (toFloat e.healthModifier)
+                            (mkGameCtx ctx m GameMsg)
+                            m
                     )
                 |> (\( model2, cmd ) ->
                         model2
