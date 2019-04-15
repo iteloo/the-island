@@ -195,9 +195,6 @@ func ShuffleQueue(e []SiteEvent) {
 
 // Begin is called when the state becomes active.
 func (s *SiteVisitController) Begin() {
-	s.game.connection.Broadcast(NewSetClockMessage(SiteVisitRoundDuration))
-	s.game.SetTimeout(SiteVisitRoundDuration)
-
 	// Fill up the queues with random events.
 	for user, _ := range s.game.UserSites {
 		for i := 0; i < MaxEventsPerRound; i++ {
@@ -259,10 +256,8 @@ func (s *SiteVisitController) Begin() {
 		)
 	}
 
-	// Try to give all the users their initial events.
-	for user, _ := range s.game.UserSites {
-		s.GiveNewEvent(user)
-	}
+	// Give all the users their initial events.
+	s.HandlePhase()
 }
 
 // GiveNewEvent tries to give a user a new event from their queue. If there
@@ -318,6 +313,7 @@ func (s *SiteVisitController) HandleStatusPhase() {
 			// send the status update to the user immediately.
 			if response != nil {
 				u.Message(response)
+				u.Message(NewSetClockMessage(SiteVisitStatusDuration))
 			}
 		}
 	}
@@ -342,15 +338,18 @@ func (s *SiteVisitController) HandleEventPhase() {
 	s.game.SetTimeout(SiteVisitRoundDuration)
 }
 
-// Timer is called when a timeout occurs.
-func (s *SiteVisitController) Timer(tick time.Duration) {
-	s.statusPhase = !s.statusPhase
-
+func (s *SiteVisitController) HandlePhase() {
 	if s.statusPhase {
 		s.HandleStatusPhase()
 	} else {
 		s.HandleEventPhase()
 	}
+	s.statusPhase = !s.statusPhase
+}
+
+// Timer is called when a timeout occurs.
+func (s *SiteVisitController) Timer(tick time.Duration) {
+	s.HandlePhase()
 }
 
 // RecieveMessage is called when a user sends a message to the server.
