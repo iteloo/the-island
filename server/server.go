@@ -70,7 +70,7 @@ func NewEvent(player *Player, message Message) Event {
 
 // A GameServer is an instance of a GameConnection.
 type GameServer struct {
-	players          []Player
+	players          []*Player
 	game             *Game
 	incomingMessages chan Event
 }
@@ -98,15 +98,15 @@ func (s *GameServer) AddPlayer(player Player) {
 // HandleCommunication is the main game loop which reads messages from players.
 // This thread is where all of the game state logic is called from, including
 // timer callbacks, etc.
-func (s *GameServer) HandleCommunication(player Player) {
+func (s *GameServer) HandleCommunication(player *Player) {
 	// Send a join message as we arrive.
-	s.incomingMessages <- NewEvent(&player, NewJoinMessage())
+	s.incomingMessages <- NewEvent(player, NewJoinMessage())
 
 	for {
 		t, data, err := player.Connection.ReadMessage()
 		if err != nil {
 			log.Printf("Websocket[name=%v] read error: %v", player.Name(), err)
-			s.incomingMessages <- NewEvent(&player, NewLeaveMessage())
+			s.incomingMessages <- NewEvent(player, NewLeaveMessage())
 			return
 		}
 
@@ -119,7 +119,7 @@ func (s *GameServer) HandleCommunication(player Player) {
 		if err != nil {
 			log.Printf("Websocket[name=%v] sent invalid message: %v", player.Name(), err)
 		}
-		s.incomingMessages <- NewEvent(&player, msg)
+		s.incomingMessages <- NewEvent(player, msg)
 	}
 }
 
@@ -134,7 +134,7 @@ func (s *GameServer) HandleMessages() {
 		case JoinMessage:
 			new := true
 			for _, x := range s.players {
-				if *event.Player == x {
+				if *event.Player == *x {
 					new = false
 					break
 				}
@@ -143,8 +143,8 @@ func (s *GameServer) HandleMessages() {
 			if new {
 				// On the first pass, set up the player and begin handling
 				// their messages for them.
-				s.players = append(s.players, *event.Player)
-				go s.HandleCommunication(*event.Player)
+				s.players = append(s.players, event.Player)
+				go s.HandleCommunication(event.Player)
 			} else {
 				// On subsequent passes, we just want to send the message
 				// through to the game controller.
