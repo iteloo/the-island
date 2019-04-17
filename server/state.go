@@ -173,6 +173,10 @@ type SiteVisitController struct {
 	eventFinishHandlers map[User]uint64
 
 	statusPhase bool
+
+	beachGoers int
+	totalLogs  int
+	totalFood  int
 }
 
 func NewSiteVisitController(game *Game) *SiteVisitController {
@@ -195,8 +199,13 @@ func ShuffleQueue(e []SiteEvent) {
 
 // Begin is called when the state becomes active.
 func (s *SiteVisitController) Begin() {
-	// Fill up the queues with random events.
-	for user, _ := range s.game.UserSites {
+	// For sites other than beach, fill up the queues with random events.
+	for user, site := range s.game.UserSites {
+		// skip beach
+		if site == Beach {
+			continue
+		}
+
 		for i := 0; i < MaxEventsPerRound; i++ {
 			event := GenerateEvent(s.game, user)
 			if event == nil {
@@ -249,7 +258,12 @@ func (s *SiteVisitController) Begin() {
 	}
 
 	// Prepend the repair event to the user queue.
-	for user, _ := range s.game.UserSites {
+	for user, site := range s.game.UserSites {
+		// skip beach
+		if site == Beach {
+			continue
+		}
+
 		s.userEventQueue[user] = append(
 			[]SiteEvent{NewRepairSite()},
 			s.userEventQueue[user]...,
@@ -355,6 +369,8 @@ func (s *SiteVisitController) Timer(tick time.Duration) {
 // RecieveMessage is called when a user sends a message to the server.
 func (s *SiteVisitController) RecieveMessage(u User, m Message) {
 	switch msg := m.(type) {
+	case GoBeachMessage:
+		log.Printf("%v", m)
 	case EventResponseMessage:
 		// It's possible that the responder has already been called
 		// due to a timer running over. So don't double-handle the event -

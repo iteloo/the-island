@@ -483,6 +483,18 @@ changeStage stagetype ctx model =
                         Just site ->
                             ( SiteVisitStage (initSiteVisitModel site)
                             , updateHealthWithAntihunger ctx model
+                                |> (if site == Beach then
+                                        \( m, cmd ) ->
+                                            m
+                                                ! [ cmd
+                                                  , ctx.toGameServer <|
+                                                        Api.GoBeach
+                                                            model.inventory
+                                                  ]
+
+                                    else
+                                        identity
+                                   )
                             )
 
                         Nothing ->
