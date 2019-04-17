@@ -30,6 +30,7 @@ const (
 	TradeAction         MessageAction = "trade"
 	SetNameAction       MessageAction = "set_name"
 	SiteSelectionAction MessageAction = "site_selected"
+	GoBeachAction       MessageAction = "go_beach"
 	EventResponseAction MessageAction = "event_response"
 
 	// Special debug-only actions
@@ -211,6 +212,20 @@ func (m WelcomeMessage) requiresAlive() bool { return false }
 
 // Client messages
 
+type GoBeachMessage struct {
+	Action    string                `json:"action"`
+	Inventory map[CommodityType]int `json:"inventory"`
+}
+
+func NewGoBeachMessage(inventory map[CommodityType]int) Message {
+	return GoBeachMessage{
+		Action:    string(GoBeachAction),
+		Inventory: inventory,
+	}
+}
+
+func (m GoBeachMessage) requiresAlive() bool { return true }
+
 type EventResponseMessage struct {
 	MessageID      uint64 `json:"message_id"`
 	ClickedOK      bool   `json:"clicked_ok"`
@@ -387,6 +402,10 @@ func DecodeMessage(data []byte) (Message, error) {
 		message = m
 	case string(SetNameAction):
 		m := SetNameMessage{}
+		err = json.Unmarshal(data, &m)
+		message = m
+	case string(GoBeachAction):
+		m := GoBeachMessage{}
 		err = json.Unmarshal(data, &m)
 		message = m
 	case string(EventResponseAction):

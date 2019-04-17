@@ -198,6 +198,7 @@ type ServerAction
     | Death
     | Trade (Material Int)
     | SiteSelected Site
+    | GoBeach (Material Int)
     | EventResponse EventResponseMessage
 
 
@@ -256,6 +257,11 @@ encodeServerAction a =
                         , E.string (siteToString site)
                         )
                       ]
+                    )
+
+                GoBeach inventory ->
+                    ( "go_beach"
+                    , [ ( "inventory", encodeMaterial E.int inventory ) ]
                     )
 
                 EventResponse response ->
