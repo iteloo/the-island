@@ -166,6 +166,54 @@ func (e Attack) End(g *Game, u User, r EventResponseMessage) *EventMessage {
 	return &msg
 }
 
+type GotoBeach struct{}
+
+func NewGotoBeach() GotoBeach {
+	return GotoBeach{}
+}
+
+func (e GotoBeach) Mods(g *Game, u User) int { return 0 }
+func (e GotoBeach) Begin(g *Game, u User) EventMessage {
+	title := fmt.Sprintf("You are at the beach")
+	description := fmt.Sprintf("Looking around to see if anyone else is here...")
+	msg := NewEventMessage(title, description)
+	msg.HasSubsequentStatusUpdate = true
+	return msg
+}
+func (e GotoBeach) End(g *Game, u User, r EventResponseMessage) *EventMessage {
+	switch s := g.state.(type) {
+	case *SiteVisitController:
+		// [hack] recomputing for every users
+		totalNumBeachGoers := len(s.goBeachResponses)
+		totalResources := map[CommodityType]int{
+			Log: 0, Food: 0, Bandage: 0, Bullet: 0,
+		}
+		for _, inventory := range s.goBeachResponses {
+			for commodityType, count := range inventory {
+				totalResources[commodityType] += count
+			}
+		}
+		required := ResourceRequiredToLeave(totalNumBeachGoers)
+		leaveSuccess := true
+		for commodityType, count := range totalResources {
+			if count < required[commodityType] {
+				leaveSuccess = false
+			}
+		}
+		title := fmt.Sprintf("Haha, you are stuck for now. Not enough resources")
+		description := "Now you gotta go back and face the group"
+		if leaveSuccess {
+			title = fmt.Sprintf("Together, you have enough resources to leave the island!")
+			description = "LEEEAVE NOW!"
+		}
+		msg := NewEventMessage(title, description)
+		return &msg
+
+	default:
+		panic(fmt.Sprintf("GotoBeach event ending during %v", s))
+	}
+}
+
 type ObserveAttack struct {
 	site Site
 }

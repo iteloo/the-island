@@ -27,9 +27,9 @@ const (
 	// Number of rounds during the site visit.
 	NumSiteVisitRounds int = 5
 	// Length of each round
-	SiteVisitRoundDuration time.Duration = 2 * time.Second
+	SiteVisitRoundDuration time.Duration = 6 * time.Second
 	// Time allocated for status updates, if any
-	SiteVisitStatusDuration time.Duration = 2 * time.Second
+	SiteVisitStatusDuration time.Duration = 4 * time.Second
 )
 
 type StateController interface {
@@ -174,9 +174,7 @@ type SiteVisitController struct {
 
 	statusPhase bool
 
-	beachGoers int
-	totalLogs  int
-	totalFood  int
+	goBeachResponses map[User]map[CommodityType]int
 }
 
 func NewSiteVisitController(game *Game) *SiteVisitController {
@@ -187,6 +185,7 @@ func NewSiteVisitController(game *Game) *SiteVisitController {
 		nextMessageID:       0,
 		messageHandlers:     map[uint64]SiteEvent{},
 		eventFinishHandlers: map[User]uint64{},
+		goBeachResponses:    map[User]map[CommodityType]int{},
 	}
 }
 
@@ -201,21 +200,25 @@ func ShuffleQueue(e []SiteEvent) {
 func (s *SiteVisitController) Begin() {
 	// For sites other than beach, fill up the queues with random events.
 	for user, site := range s.game.UserSites {
-		// skip beach
-		if site == Beach {
-			continue
-		}
-
-		for i := 0; i < MaxEventsPerRound; i++ {
-			event := GenerateEvent(s.game, user)
-			if event == nil {
-				continue
-			}
-
+		switch site {
+		case Beach:
+			event := NewGotoBeach()
 			s.userEventQueue[user] = append(
 				s.userEventQueue[user],
-				*event,
+				event,
 			)
+		default:
+			for i := 0; i < MaxEventsPerRound; i++ {
+				event := GenerateEvent(s.game, user)
+				if event == nil {
+					continue
+				}
+
+				s.userEventQueue[user] = append(
+					s.userEventQueue[user],
+					*event,
+				)
+			}
 		}
 	}
 
@@ -366,11 +369,29 @@ func (s *SiteVisitController) Timer(tick time.Duration) {
 	s.HandlePhase()
 }
 
+func ResourceRequiredToLeave(numPlayers int) map[CommodityType]int {
+	// [todo] fill in with real values
+	if numPlayers == 1 {
+		return map[CommodityType]int{
+			Log:  1,
+			Food: 0,
+		}
+	} else {
+		return map[CommodityType]int{
+			Log:  0,
+			Food: 0,
+		}
+	}
+}
+
 // RecieveMessage is called when a user sends a message to the server.
 func (s *SiteVisitController) RecieveMessage(u User, m Message) {
 	switch msg := m.(type) {
 	case GoBeachMessage:
-		log.Printf("%v", m)
+		if s.game.UserSites[u] != Beach {
+			panic("GoBeach message received when user not in beach")
+		}
+		s.goBeachResponses[u] = msg.Inventory
 	case EventResponseMessage:
 		// It's possible that the responder has already been called
 		// due to a timer running over. So don't double-handle the event -
