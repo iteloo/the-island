@@ -57,20 +57,31 @@ gameView model =
                 [ deathView ]
 
               else
-                [ div [ class "active-state" ]
-                    [ case model.stage of
-                        WaitStage m ->
-                            Html.map WaitMsg (waitView m)
-
-                        SiteSelectionStage m ->
-                            Html.map SiteSelectionMsg (siteSelectionView m)
-
-                        SiteVisitStage m ->
-                            Html.map SiteVisitMsg (siteVisitView model m)
-
-                        GameOverStage ->
-                            gameOverView
+                [ div
+                    [ class "active-state"
+                    , class "overlay-container"
                     ]
+                  <|
+                    List.concat
+                        [ [ case model.stage of
+                                WaitStage m ->
+                                    Html.map WaitMsg (waitView m)
+
+                                SiteSelectionStage m ->
+                                    Html.map SiteSelectionMsg (siteSelectionView m)
+
+                                SiteVisitStage m ->
+                                    Html.map SiteVisitMsg (siteVisitView model m)
+
+                                GameOverStage ->
+                                    gameOverView
+                          ]
+                        , if model.showOverlay then
+                            [ infoOverlay ]
+
+                          else
+                            []
+                        ]
                 , div [ class "tray" ] [ basketView model ]
                 ]
             ]
@@ -81,9 +92,10 @@ deathView =
     div [] [ text "You died!" ]
 
 
-icon : String -> String -> Html msg
-icon class_name icon_name =
-    i [ class ("material-icons " ++ class_name) ] [ text icon_name ]
+icon : List (Attribute msg) -> String -> String -> Html msg
+icon attrs class_name icon_name =
+    i ([ class ("material-icons " ++ class_name) ] ++ attrs)
+        [ text icon_name ]
 
 
 imgIcon : String -> String -> Html msg
@@ -99,9 +111,9 @@ topBar : GameModel -> Html GameMsg
 topBar model =
     div [ class "topbar" ] <|
         List.concat
-            [ [ icon "link-icon" "link" ]
+            [ [ icon [ onClick MenuButton ] "menu-icon" "menu" ]
             , case model.stage of
-                -- [hack] not the cleanest
+                -- [hack] not the cleanests
                 WaitStage _ ->
                     []
 
@@ -124,7 +136,7 @@ timerView timer =
                     timer
                 )
             ]
-        , icon "timer-icon" "timer"
+        , icon [] "timer-icon" "timer"
         ]
 
 
@@ -148,14 +160,49 @@ status { health, antihunger } =
     div [ class "status" ] <|
         List.concat
             [ List.repeat healthInt <|
-                icon "health-icon" "favorite"
+                icon [] "health-icon" "favorite"
             , List.repeat emptyHealthInt <|
-                icon "empty-health-icon" "favorite_border"
+                icon [] "empty-health-icon" "favorite_border"
             , List.repeat antihungerInt <|
                 imgIcon "antihunger-icon" "assets/carrot.png"
             , List.repeat emptyAntihungerInt <|
                 imgIcon "empty-antihunger-icon" "assets/carrot_transparent.png"
             ]
+
+
+infoOverlay : Html GameMsg
+infoOverlay =
+    div
+        [ class "overlay"
+        , onClick DismissOverlay
+        ]
+        [ h1 [] [ text "How to leave this f*cking island" ]
+        , div [] [ text "To leave the island, you must go to the beach" ]
+        , div [] [ text """Everyone at the beach, together, must have brought
+        enough resources to successfully leave, otherwise,
+        the attempt will fail and you'll have wasted a whole day.""" ]
+        , h2 [] [ text "Required number of resources" ]
+        , tableView requiredResources
+        ]
+
+
+{-| [ todo ] put in actual data
+-}
+requiredResources =
+    [ [ "Num of people at beach", "Total logs", "Total food" ]
+    , [ "1", "5", "3" ]
+    , [ "2-3", "10", "6" ]
+    ]
+
+
+tableView : List (List String) -> Html msg
+tableView tableData =
+    let
+        row =
+            tr [] << List.map (td [] << List.singleton << text)
+    in
+    table [] <|
+        List.map row tableData
 
 
 basketView : GameModel -> Html GameMsg
