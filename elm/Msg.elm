@@ -44,6 +44,8 @@ type GameMsg
     | EmptyBasket
     | Shake
     | TradeButton
+    | MenuButton
+    | DismissOverlay
 
 
 type SiteSelectionMsg

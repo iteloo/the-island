@@ -212,6 +212,12 @@ updateGame ctx msg model =
         TradeButton ->
             trade model
 
+        MenuButton ->
+            { model | showOverlay = not model.showOverlay } ! []
+
+        DismissOverlay ->
+            { model | showOverlay = False } ! []
+
 
 updateSiteSelection :
     GameCtx SiteSelectionMsg

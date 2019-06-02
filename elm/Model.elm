@@ -64,6 +64,7 @@ type alias GameModel =
     , inventory : Material Int
     , basket : Material Int
     , timer : Maybe Timer
+    , showOverlay : Bool
     }
 
 
@@ -143,6 +144,7 @@ initGameModel name =
     , inventory = Material.empty
     , basket = Material.empty
     , timer = Nothing
+    , showOverlay = False
     }
 
 
